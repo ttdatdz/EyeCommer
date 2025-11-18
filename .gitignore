@@ -1,6 +1,11 @@
-### Backend ###
+#############################
+### Backend (Spring Boot) ###
+#############################
+
 Backend/target/
 Backend/.mvn/wrapper/maven-wrapper.jar
+
+# Keep internal target folders from source (important)
 !Backend/**/src/main/**/target/
 !Backend/**/src/test/**/target/
 
@@ -14,7 +19,7 @@ Backend/.springBeans
 Backend/.sts4-cache
 
 ### IntelliJ IDEA ###
-Backend/.idea
+Backend/.idea/
 Backend/*.iws
 Backend/*.iml
 Backend/*.ipr
@@ -29,8 +34,53 @@ Backend/build/
 !Backend/**/src/main/**/build/
 !Backend/**/src/test/**/build/
 
-### VS Code ###
+### VS Code (Backend) ###
 Backend/.vscode/
 
 ### Environment ###
 Backend/.env
+
+
+#############################
+### Frontend (Next.js) ###
+#############################
+
+frontend_eyecommer/node_modules/
+frontend_eyecommer/.pnp
+frontend_eyecommer/.pnp.*
+frontend_eyecommer/.yarn/*
+!frontend_eyecommer/.yarn/patches
+!frontend_eyecommer/.yarn/plugins
+!frontend_eyecommer/.yarn/releases
+!frontend_eyecommer/.yarn/versions
+
+# testing
+frontend_eyecommer/coverage/
+
+# next.js
+frontend_eyecommer/.next/
+frontend_eyecommer/out/
+
+# production
+frontend_eyecommer/build/
+
+# misc
+frontend_eyecommer/.DS_Store
+frontend_eyecommer/*.pem
+
+# debug logs
+frontend_eyecommer/npm-debug.log*
+frontend_eyecommer/yarn-debug.log*
+frontend_eyecommer/yarn-error.log*
+frontend_eyecommer/.pnpm-debug.log*
+
+# env
+frontend_eyecommer/.env*
+!frontend_eyecommer/.env.example
+
+# vercel
+frontend_eyecommer/.vercel/
+
+# typescript
+frontend_eyecommer/*.tsbuildinfo
+frontend_eyecommer/next-env.d.ts
