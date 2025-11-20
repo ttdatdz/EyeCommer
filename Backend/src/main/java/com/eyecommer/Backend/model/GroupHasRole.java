@@ -17,7 +17,7 @@ public class GroupHasRole extends AbstractEntity<Long> {
 
     @ManyToOne
     @JoinColumn(name = "role_id")
-    private Roles role;
+    private Role role;
 
     @Column(name = "assigned_at")
     private Date assignedAt;

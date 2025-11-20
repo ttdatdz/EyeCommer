@@ -1,8 +1,7 @@
 package com.eyecommer.Backend.model;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.Set;
 
@@ -10,6 +9,9 @@ import java.util.Set;
 @Table(name = "Address")
 @Getter
 @Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Address extends AbstractEntity<Long> {
     @ManyToOne
     @JoinColumn(name = "user_id")

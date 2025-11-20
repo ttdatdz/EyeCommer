@@ -10,10 +10,10 @@ import lombok.Setter;
 import java.util.Set;
 
 @Entity
-@Table(name = "Roles")
+@Table(name = "Role")
 @Getter
 @Setter
-public class Roles extends AbstractEntity<Long> {
+public class Role extends AbstractEntity<Long> {
     @Column(name = "name")
     private String name;
 

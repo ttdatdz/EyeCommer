@@ -13,7 +13,7 @@ import java.util.Date;
 public class RoleHasPermission extends AbstractEntity<Long> {
     @ManyToOne
     @JoinColumn(name = "role_id")
-    private Roles role;
+    private Role role;
 
     @ManyToOne
     @JoinColumn(name = "permission_id")
