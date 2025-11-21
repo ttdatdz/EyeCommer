@@ -68,7 +68,7 @@ public class MailService {
         MimeMessageHelper helper = new MimeMessageHelper(message,MimeMessageHelper.MULTIPART_MODE_MIXED_RELATED,"UTF-8");
 
         //Chuẩn bị data muốn truyền vào template
-        String linkConfirm = String.format("http://localhost:8086/user/confirm/%s?verifyCode=%s",id,s);
+        String linkConfirm = String.format("http://localhost:8080/user/confirm/%s?verifyCode=%s",id,s);
         Map<String, Object> properties = new HashMap<>();
         properties.put("linkConfirm",linkConfirm);
 
@@ -80,7 +80,7 @@ public class MailService {
         String html =springTemplateEngine.process("confirm-email",context);
 
         //cấu hình mail(người gửi + chủ đề+ ng nhận + nội dung)
-        helper.setFrom(emailFrom,"Dat Tran Demo");
+        helper.setFrom(emailFrom,"EyeCommer System");
         helper.setTo(email);
         helper.setSubject("Please confirm your account");
         helper.setText(html, true);
