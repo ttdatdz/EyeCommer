@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -23,6 +24,12 @@ public class Product extends AbstractEntity<Long> {
     @Column(name = "status")
     private String status;
 
+    @Column(name = "image_url")
+    private List<String> imageUrl;
+
+    @Column(name = "short_description")
+    private String shortDescription;
+
     @ManyToMany
     @JoinTable(
             name = "Category_Product",
@@ -39,4 +46,5 @@ public class Product extends AbstractEntity<Long> {
 
     @OneToMany(mappedBy = "product")
     private Set<StockReceiptItem> stockReceiptItems;
+
 }
