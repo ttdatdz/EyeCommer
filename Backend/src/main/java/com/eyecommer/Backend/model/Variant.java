@@ -17,12 +17,9 @@ public class Variant extends AbstractEntity<Long> {
     @Column(name = "description")
     private String description;
 
-    @OneToMany(mappedBy = "variant")
-    private Set<VariantProduct> variantProducts;
+    // Một thuộc tính (Variant) có thể được sử dụng bởi Nhiều (N) SKU.
+    @OneToMany(mappedBy = "variant", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<VariantProductAttribute> variantProductAttributes; // Tên mới
 
-    @OneToMany(mappedBy = "variant")
-    private Set<OrderItem> orderItems;
 
-    @OneToMany(mappedBy = "variant")
-    private Set<StockReceiptItem> stockReceiptItems;
 }

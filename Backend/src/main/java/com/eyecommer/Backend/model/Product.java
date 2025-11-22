@@ -24,8 +24,8 @@ public class Product extends AbstractEntity<Long> {
     @Column(name = "status")
     private String status;
 
-    @Column(name = "image_url")
-    private List<String> imageUrl;
+    @Column(name = "thumbnail_url")
+    private String thumbnailUrl;
 
     @Column(name = "short_description")
     private String shortDescription;
@@ -41,10 +41,10 @@ public class Product extends AbstractEntity<Long> {
     @OneToMany(mappedBy = "product")
     private Set<VariantProduct> variants;
 
-    @OneToMany(mappedBy = "product")
-    private Set<OrderItem> orderItems;
-
-    @OneToMany(mappedBy = "product")
-    private Set<StockReceiptItem> stockReceiptItems;
+//    @OneToMany(mappedBy = "product")
+//    private Set<OrderItem> orderItems;
+//
+//    @OneToMany(mappedBy = "product")
+//    private Set<StockReceiptItem> stockReceiptItems;
 
 }

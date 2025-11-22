@@ -13,13 +13,10 @@ public class StockReceiptItem extends AbstractEntity<Long> {
     @JoinColumn(name = "stock_receipt_id")
     private StockReceipts stockReceipt;
 
-    @ManyToOne
-    @JoinColumn(name = "product_id")
-    private Product product;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_product_id")
+    private VariantProduct variantProduct;
 
-    @ManyToOne
-    @JoinColumn(name = "variant_id")
-    private Variant variant;
 
     @Column(name = "quantity")
     private Integer quantity;
