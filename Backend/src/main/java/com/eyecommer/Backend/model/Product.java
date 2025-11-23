@@ -30,13 +30,10 @@ public class Product extends AbstractEntity<Long> {
     @Column(name = "short_description")
     private String shortDescription;
 
-    @ManyToMany
-    @JoinTable(
-            name = "Category_Product",
-            joinColumns = @JoinColumn(name = "product_id"),
-            inverseJoinColumns = @JoinColumn(name = "category_id")
-    )
-    private Set<Category> categories;
+
+    // Quan hệ 1-N tới bảng trung gian ProductCategory
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ProductCategory> productCategories;
 
     @OneToMany(mappedBy = "product")
     private Set<VariantProduct> variants;

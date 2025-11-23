@@ -17,6 +17,7 @@ public class Category extends AbstractEntity<Long> {
     @Column(name = "description")
     private String description;
 
-    @ManyToMany(mappedBy = "categories")
-    private Set<Product> products;
+    // Quan hệ 1-N tới bảng trung gian ProductCategory
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<ProductCategory> productCategories;
 }

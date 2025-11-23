@@ -33,7 +33,7 @@ import org.springframework.web.filter.CorsFilter;
 public class AppConfig {
     private final UserService userService;
     private final JwtTokenFilter jwtTokenFilter;
-    private String[] WHITE_LIST = {"/auth/**"};
+    private String[] WHITE_LIST = {"/api/auth/**"};
     //Cấu hình cors
     @Bean
     public FilterRegistrationBean<CorsFilter> corsFilterRegistration() {
@@ -43,7 +43,7 @@ public class AppConfig {
         config.setAllowCredentials(true);
         config.addAllowedOrigin("http://localhost:3000");
         config.addAllowedHeader("*");
-        config.addAllowedMethod("POST");
+        config.addAllowedMethod("POST,GET,PUT,PATCH,DELETE,OPTIONS");
 
         source.registerCorsConfiguration("/**", config);
 
@@ -59,22 +59,22 @@ public class AppConfig {
     }
 
     @Bean
-    public SecurityFilterChain configure(@NonNull HttpSecurity http,AuthenticationProvider provider) throws Exception {
-
+    public SecurityFilterChain configure(@NonNull HttpSecurity http, AuthenticationProvider provider) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(authorizeRequests -> {
-                    authorizeRequests
-                            .requestMatchers(WHITE_LIST).permitAll();
-                    authorizeRequests.requestMatchers("/users/**").hasAuthority("USER")
-                            .anyRequest().authenticated();
-                        }
-
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(WHITE_LIST).permitAll()
+                        .requestMatchers("/api/categories/**").hasAnyAuthority("admin", "staff")
+                        .requestMatchers("/api/users/**").hasAuthority("user")
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(provider).addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
+                .authenticationProvider(provider)
+                .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
+
 
     @Bean
     public AuthenticationProvider provider(PasswordEncoder passwordEncoder) {

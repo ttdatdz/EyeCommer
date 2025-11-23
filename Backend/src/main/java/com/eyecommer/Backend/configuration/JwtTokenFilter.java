@@ -35,14 +35,14 @@ public class JwtTokenFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         final String authorization = request.getHeader(AUTHORIZATION);
 
-        if (path.startsWith("/auth/")) {
+        if (path.startsWith("/api/auth/")) {
             log.info("----------ignore doFilterInternal ----------");
             filterChain.doFilter(request, response);
             return;
         }
         if (StringUtils.isBlank(authorization) || !authorization.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
-            log.info("----------ignore doFilterInternal ----------");
+            log.info("----------chay vao day ----------");
             return;
         }
         final String token = authorization.substring("Bearer ".length());
@@ -59,6 +59,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
                 SecurityContextHolder.setContext(context);
 
             }
+            log.info("Authorities: {}", userDetails.getAuthorities());
 
         }
 
