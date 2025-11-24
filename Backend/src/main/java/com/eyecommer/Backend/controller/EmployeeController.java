@@ -1,6 +1,8 @@
 package com.eyecommer.Backend.controller;
 
+import com.eyecommer.Backend.configuration.Translator;
 import com.eyecommer.Backend.dto.request.UserRequestDTO;
+import com.eyecommer.Backend.dto.request.UserUpdateRequestDTO;
 import com.eyecommer.Backend.dto.response.*;
 import com.eyecommer.Backend.service.UserService;
 import org.springframework.http.HttpStatus;
@@ -42,39 +44,24 @@ public class EmployeeController {
 //            return new ResponseData<>(400, "Failed: " + e.getMessage());
 //        }
 //    }
-    @DeleteMapping("/{id}")
+    @PostMapping
     @PreAuthorize("hasAuthority('admin')")
-    public ResponseData<String> delete(@PathVariable Long id) {
+    public ResponseData<?> create(@RequestBody @Valid UserRequestDTO dto) {
         try {
-            employeeService.delete(id);
-            return new ResponseData<>(200, "Employee deleted successfully");
+            Long employeeID = employeeService.create(dto);
+            return new ResponseData<>(200, "Created", employeeID);
         } catch (Exception e) {
-            return new ResponseData<>(400, "Failed: " + e.getMessage());
+            return new ResponseData<>(HttpStatus.BAD_REQUEST.value(), "Failed: " + e.getMessage());
         }
     }
-//    @PostMapping
-//    @PreAuthorize("hasAuthority('admin')")
-//    public ResponseData<?> create(@RequestBody @Valid UserRequestDTO dto) {
-//        try {
-//            Long employeeID = employeeService.create(dto);
-//            return new ResponseData<>(200, "Created", employeeID);
-//        } catch (Exception e) {
-//            return new ResponseData<>(HttpStatus.BAD_REQUEST.value(), "Failed: " + e.getMessage());
-//        }
-//    }
-
-//    @PatchMapping("/{id}")
-//    @PreAuthorize("hasAuthority('admin')")
-//    public ResponseData<EmployeeResponseDTO> update(@PathVariable Long id, @RequestBody @Valid EmployeeUpdateDTO dto) {
-//        try {
-//            EmployeeResponseDTO updated = employeeService.update(id, dto);
-//            return new ResponseData<>(200, "Updated", updated);
-//        } catch (Exception e) {
-//            return new ResponseData<>(400, "Failed: " + e.getMessage());
-//        }
-//    }
-
-
-
+    @PatchMapping("/{userId}")
+    public ResponseData<UserDetailResponse> updateUser(@PathVariable long userId , @RequestBody UserUpdateRequestDTO request) {
+        try {
+            employeeService.updateUser(userId, request);
+            return new ResponseData<>(HttpStatus.ACCEPTED.value(), Translator.toLocale("user.upd.success"));
+        } catch (Exception e) {
+            return new ResponseError(HttpStatus.BAD_REQUEST.value(), "Update user fail " + e.getMessage());
+        }
+    }
 
 }

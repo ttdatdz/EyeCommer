@@ -2,9 +2,10 @@ package com.eyecommer.Backend.service.impl;
 
 import com.eyecommer.Backend.configuration.Translator;
 import com.eyecommer.Backend.dto.request.AddressRequestDTO;
-import com.eyecommer.Backend.dto.request.UserRequestDTO;
+import com.eyecommer.Backend.dto.request.UserUpdateRequestDTO;
 import com.eyecommer.Backend.dto.response.PageResponse;
 import com.eyecommer.Backend.dto.response.UserDetailResponse;
+import com.eyecommer.Backend.exception.InvalidDataException;
 import com.eyecommer.Backend.exception.ResourceNotFoundException;
 import com.eyecommer.Backend.mapper.AddressMapper;
 import com.eyecommer.Backend.mapper.UserMapper;
@@ -16,29 +17,22 @@ import com.eyecommer.Backend.repository.RoleRepository;
 import com.eyecommer.Backend.repository.SearchRepository;
 import com.eyecommer.Backend.repository.UserHasRoleRepository;
 import com.eyecommer.Backend.repository.UserRepository;
-import com.eyecommer.Backend.service.MailService;
 import com.eyecommer.Backend.service.UserService;
 import com.eyecommer.Backend.utils.UserStatus;
-import com.eyecommer.Backend.utils.UserType;
-import jakarta.mail.MessagingException;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -53,7 +47,21 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDetailsService userDetailsService() {
-        return username ->  userRepository.findByUsername(username).orElseThrow(()->new UsernameNotFoundException("User not found"));
+        return username -> {
+            // 1. Tìm User
+            User user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+            // 2. KIỂM TRA TRẠNG THÁI (QUAN TRỌNG)
+            if (user.getStatus() == UserStatus.INACTIVE) {
+                // Ném ngoại lệ BadCredentialsException hoặc cụ thể hơn
+                // (UsernameNotFoundException là cách thường dùng để ẩn chi tiết)
+                throw new DisabledException("User is inactive or blocked.");
+            }
+
+            // 3. Trả về UserDetails (nếu ACTIVE)
+            return user;
+        };
     }
 
     @Override
@@ -71,36 +79,99 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByUsername(userName).orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
-
-
-
     @Override
     public long saveUser(User user){
         userRepository.save(user);
         return user.getId();
     }
 
-    @Override
-    public void updateUser(long userId, UserRequestDTO request) {
-        User user = getUserById(userId);
-        if (!request.getEmail().equals(user.getEmail())) {
-            // check email from database if not exist then allow update email otherwise throw exception
-            user.setEmail(request.getEmail());
-        }
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setDateOfBirth(request.getDateOfBirth());
-        user.setGender(request.getGender());
-        user.setPhone(request.getPhone());
-
-        user.setUsername(request.getUsername());
-        user.setPassword(request.getPassword());
-        user.setStatus(request.getStatus());
-        userRepository.save(user);
-
-        log.info("User has updated successfully, userId={}", userId);
-    }
-
+//    @Override
+//    public UserDetailResponse updateUser(long userId, UserUpdateRequestDTO request) {
+//        // Lấy Entity gốc từ DB
+//        User user = getUserById(userId);
+//
+//        // --- 1. Cập nhật các trường thông thường (PATCH Logic) ---
+//
+//        // Trường String (Kiểm tra null VÀ rỗng/blank)
+//        if (StringUtils.isNotBlank(request.getFirstName())) user.setFirstName(request.getFirstName());
+//        if (StringUtils.isNotBlank(request.getLastName())) user.setLastName(request.getLastName());
+//
+//
+//        // Cập nhật các trường địa chỉ Profile
+//        if (StringUtils.isNotBlank(request.getProfileAddressDetail())) user.setProfileAddressDetail(request.getProfileAddressDetail());
+//        if (StringUtils.isNotBlank(request.getProfileCity())) user.setProfileCity(request.getProfileCity());
+//        if (StringUtils.isNotBlank(request.getProfileDistrict())) user.setProfileDistrict(request.getProfileDistrict());
+//        if (StringUtils.isNotBlank(request.getProfilePostalCode())) user.setProfilePostalCode(request.getProfilePostalCode());
+//
+//        // Trường Date/Enum (Kiểm tra null)
+//        if (request.getDateOfBirth() != null) user.setDateOfBirth(request.getDateOfBirth());
+//        if (request.getGender() != null) user.setGender(request.getGender());
+//        if (request.getStatus() != null) user.setStatus(request.getStatus());
+//
+//        // --- 2. Xử lý các trường Đặc biệt (Username, Email, Password,phone) ---
+//
+//        // A. Username (Check trùng khi thay đổi)
+//        if (StringUtils.isNotBlank(request.getUsername()) && !request.getUsername().equals(user.getUsername())) {
+//            if (userRepository.existsByUsername(request.getUsername())) {
+//                throw new InvalidDataException("Username '" + request.getUsername() + "' đã được sử dụng.");
+//            }
+//            user.setUsername(request.getUsername());
+//        }
+//
+//        // B. Email (Check trùng khi thay đổi)
+//        if (StringUtils.isNotBlank(request.getEmail()) && !request.getEmail().equals(user.getEmail())) {
+//            if (userRepository.existsByEmail(request.getEmail())) {
+//                throw new InvalidDataException("Email '" + request.getEmail() + "' đã được sử dụng.");
+//            }
+//            user.setEmail(request.getEmail());
+//        }
+//        if (StringUtils.isNotBlank(request.getPhone()) && !request.getPhone().equals(user.getPhone())) {
+//            if (userRepository.existsByPhone(request.getPhone())) {
+//                throw new InvalidDataException("Phone '" + request.getPhone() + "' đã được sử dụng.");
+//            }
+//            user.setPhone(request.getPhone());
+//        }
+//        // C. Password (Mã hóa nếu được cung cấp)
+//        if (StringUtils.isNotBlank(request.getPassword())) {
+//            // Mã hóa mật khẩu mới
+//            user.setPassword(passwordEncoder.encode(request.getPassword()));
+//        }
+//
+//
+//        if (StringUtils.isNotBlank(request.getRoleName())) {
+//            // Gọi hàm thay thế vai trò
+//            updateUserRoles(userId, request.getRoleName());
+//        }
+//
+//        // --- 3. Lưu và Trả về ---
+//        User saved = userRepository.save(user);
+//        // Chuyển Entity đã lưu sang DTO phản hồi chi tiết
+//        return userMapper.toDTO(saved);
+//    }
+//    public void updateUserRoles(Long userId, String newRoleName) {
+//
+//        // 1. Kiểm tra User tồn tại
+//        User user = getUserById(userId); // Giả định hàm helper getUserById(Long) tồn tại
+//
+//        // 2. Tìm Role Entity mới
+//        Role newRole = roleRepository.findByName(newRoleName)
+//                .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + newRoleName));
+//
+//        // 3. XÓA TẤT CẢ CÁC VAI TRÒ CŨ
+//        List<UserHasRole> existingRoles = userHasRoleRepository.findByUserId(userId);
+//
+//        if (!existingRoles.isEmpty()) {
+//            userHasRoleRepository.deleteAll(existingRoles);
+//        }
+//
+//        // 4. TẠO VÀ LƯU VAI TRÒ MỚI
+//        UserHasRole newUserRole = new UserHasRole();
+//        newUserRole.setUser(user);
+//        newUserRole.setRole(newRole);
+//        // Tùy chọn: newUserRole.setAssignedAt(new Date());
+//
+//        userHasRoleRepository.save(newUserRole);
+//    }
     @Override
     public void changeStatus(long userId, UserStatus status) {
         User user = getUserById(userId);
@@ -109,11 +180,11 @@ public class UserServiceImpl implements UserService {
 
         log.info("User status has changed successfully, userId={}", userId);
     }
-
     @Override
     public void deleteUser(long userId) {
-        userRepository.deleteById(userId);
-        log.info("User has deleted permanent successfully, userId={}", userId);
+        User user = getUserById(userId);
+        user.setStatus(UserStatus.INACTIVE);
+        userRepository.save(user);
     }
 
     @Override

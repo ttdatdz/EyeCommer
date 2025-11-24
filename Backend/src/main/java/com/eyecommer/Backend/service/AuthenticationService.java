@@ -21,8 +21,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -46,37 +49,44 @@ public class AuthenticationService {
 
     public TokenResponse authenticate(SignInRequest signInRequest) {
         log.info("---------- authenticate ----------");
+        try {
+            // 1️⃣ Gọi Spring Security xác thực username/password
+            var authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            signInRequest.getUsername(),
+                            signInRequest.getPassword()
+                    )
+            );
 
-        // 1️⃣ Gọi Spring Security xác thực username/password
-        var authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        signInRequest.getUsername(),
-                        signInRequest.getPassword()
-                )
-        );
+            // 2️⃣ Lưu Authentication vào context
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        // 2️⃣ Lưu Authentication vào context
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+            // 3️⃣ Lấy user đã xác thực
+            var user = (User) authentication.getPrincipal();
 
-        // 3️⃣ Lấy user đã xác thực
-        var user = (User) authentication.getPrincipal();
+            // 4️⃣ Tạo token
+            String accessToken = jwtService.generateToken(user);
+            String refreshToken = jwtService.generateRefreshToken(user);
 
-        // 4️⃣ Tạo token
-        String accessToken = jwtService.generateToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user);
+            // save token to db
+            tokenService.save(Token.builder()
+                    .username(user.getUsername())
+                    .accessToken(accessToken)
+                    .refreshToken(refreshToken)
+                    .build());
+            // 5️⃣ Trả về response
+            return TokenResponse.builder()
+                    .accessToken(accessToken)
+                    .refreshToken(refreshToken)
+                    .userId(user.getId())
+                    .build();
+        }catch(DisabledException e){
+            throw new DisabledException("Tài khoản đã bị khóa/block. Vui lòng liên hệ hỗ trợ.");
+        }catch (BadCredentialsException | UsernameNotFoundException e) {
+            // Giữ nguyên lỗi chung cho các trường hợp còn lại
+            throw new BadCredentialsException("Tên đăng nhập hoặc mật khẩu không đúng.");
+        }
 
-        // save token to db
-        tokenService.save(Token.builder()
-                .username(user.getUsername())
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .build());
-        // 5️⃣ Trả về response
-        return TokenResponse.builder()
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .userId(user.getId())
-                .build();
     }
 
     public TokenResponse refreshToken(String refreshToken) {

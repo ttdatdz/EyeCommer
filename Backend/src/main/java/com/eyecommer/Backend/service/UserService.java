@@ -1,6 +1,7 @@
 package com.eyecommer.Backend.service;
 
 import com.eyecommer.Backend.dto.request.UserRequestDTO;
+import com.eyecommer.Backend.dto.request.UserUpdateRequestDTO;
 import com.eyecommer.Backend.dto.response.PageResponse;
 import com.eyecommer.Backend.dto.response.UserDetailResponse;
 import com.eyecommer.Backend.model.User;
@@ -19,7 +20,7 @@ public interface UserService {
 //    long createUser(UserRequestDTO request) throws MessagingException, UnsupportedEncodingException;
     long saveUser(User request);
 
-    void updateUser(long userId, UserRequestDTO request);
+//    UserDetailResponse updateUser(long userId, UserUpdateRequestDTO request);
 
     void changeStatus(long userId, UserStatus status);
 

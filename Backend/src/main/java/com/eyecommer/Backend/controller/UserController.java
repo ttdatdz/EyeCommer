@@ -3,6 +3,7 @@ package com.eyecommer.Backend.controller;
 import com.eyecommer.Backend.configuration.Translator;
 import com.eyecommer.Backend.dto.ChangePasswordDTO;
 import com.eyecommer.Backend.dto.request.UserRequestDTO;
+import com.eyecommer.Backend.dto.request.UserUpdateRequestDTO;
 import com.eyecommer.Backend.dto.response.PageResponse;
 import com.eyecommer.Backend.dto.response.ResponseData;
 import com.eyecommer.Backend.dto.response.ResponseError;
@@ -61,34 +62,22 @@ public class UserController {
             return new ResponseError(HttpStatus.BAD_REQUEST.value(), "Confirm was failed");
         }
     }
-    @PutMapping("/update/{userId}")
-    public ResponseData<Void> updateUser(@PathVariable long userId ,@RequestBody UserRequestDTO request) {
-        log.info("Request update userId={}", userId);
-        try {
-            userService.updateUser(userId, request);
-            return new ResponseData<>(HttpStatus.ACCEPTED.value(), Translator.toLocale("user.upd.success"));
-        } catch (Exception e) {
-//            e.getCause() trả về exception gốc đã gây ra exception hiện tại.
-            log.error(ERROR_MESSAGE, e.getMessage(), e.getCause());
-            return new ResponseError(HttpStatus.BAD_REQUEST.value(), "Update user fail");
-        }
-    }
-    @PatchMapping("/{userId}")
-    public ResponseData<Void> updateStatus(@Min(1) @PathVariable long userId, @RequestParam UserStatus status) {
-        log.info("Request change status, userId={}", userId);
 
-        try {
-            userService.changeStatus(userId, status);
-            return new ResponseData<>(HttpStatus.ACCEPTED.value(), Translator.toLocale("user.change.success"));
-        } catch (Exception e) {
-            log.error(ERROR_MESSAGE, e.getMessage(), e.getCause());
-            return new ResponseError(HttpStatus.BAD_REQUEST.value(), "Change status fail");
-        }
-    }
+//    @PatchMapping("/{userId}")
+//    public ResponseData<Void> updateUser(@Min(1) @PathVariable long userId, @RequestParam UserStatus status) {
+//        log.info("Request change status, userId={}", userId);
+//
+//        try {
+//            userService.changeStatus(userId, status);
+//            return new ResponseData<>(HttpStatus.ACCEPTED.value(), Translator.toLocale("user.change.success"));
+//        } catch (Exception e) {
+//            log.error(ERROR_MESSAGE, e.getMessage(), e.getCause());
+//            return new ResponseError(HttpStatus.BAD_REQUEST.value(), "Change status fail");
+//        }
+//    }
     @DeleteMapping("/{userId}")
+    @PreAuthorize("hasAuthority('admin')")
     public ResponseData<Void> deleteUser(@PathVariable @Min(value = 1, message = "userId must be greater than 0") long userId) {
-        log.info("Request delete userId={}", userId);
-
         try {
             userService.deleteUser(userId);
             return new ResponseData<>(HttpStatus.NO_CONTENT.value(), Translator.toLocale("user.del.success"));
