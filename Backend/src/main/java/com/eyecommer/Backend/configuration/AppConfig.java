@@ -31,6 +31,7 @@ import org.springframework.web.filter.CorsFilter;
 @EnableMethodSecurity(prePostEnabled = true)
 @RequiredArgsConstructor
 public class AppConfig {
+
     private final UserService userService;
     private final JwtTokenFilter jwtTokenFilter;
     private String[] WHITE_LIST = {"/api/auth/**"};
@@ -65,7 +66,7 @@ public class AppConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(WHITE_LIST).permitAll()
                         .requestMatchers("/api/categories/**").hasAnyAuthority("admin", "staff")
-                        .requestMatchers("/api/users/**").hasAuthority("user")
+                        .requestMatchers("/api/users/**").hasAnyAuthority("admin", "staff")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

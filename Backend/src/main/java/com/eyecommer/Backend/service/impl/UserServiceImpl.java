@@ -7,9 +7,14 @@ import com.eyecommer.Backend.dto.response.PageResponse;
 import com.eyecommer.Backend.dto.response.UserDetailResponse;
 import com.eyecommer.Backend.exception.ResourceNotFoundException;
 import com.eyecommer.Backend.mapper.AddressMapper;
+import com.eyecommer.Backend.mapper.UserMapper;
 import com.eyecommer.Backend.model.Address;
+import com.eyecommer.Backend.model.Role;
 import com.eyecommer.Backend.model.User;
+import com.eyecommer.Backend.model.UserHasRole;
+import com.eyecommer.Backend.repository.RoleRepository;
 import com.eyecommer.Backend.repository.SearchRepository;
+import com.eyecommer.Backend.repository.UserHasRoleRepository;
 import com.eyecommer.Backend.repository.UserRepository;
 import com.eyecommer.Backend.service.MailService;
 import com.eyecommer.Backend.service.UserService;
@@ -18,15 +23,16 @@ import com.eyecommer.Backend.utils.UserType;
 import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -40,8 +46,11 @@ import java.util.regex.Pattern;
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final SearchRepository searchRepository;
-    private final MailService mailService;
     private final AddressMapper addressMapper;
+    private final UserMapper userMapper;
+    private final RoleRepository roleRepository;
+    private final UserHasRoleRepository userHasRoleRepository;
+
     @Override
     public UserDetailsService userDetailsService() {
         return username ->  userRepository.findByUsername(username).orElseThrow(()->new UsernameNotFoundException("User not found"));
@@ -62,43 +71,8 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByUsername(userName).orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
-    @Override
-    public int addUser(UserRequestDTO user) {
-        System.out.println("Save user into database");
-        if(user.getFirstName().equals("dat")){
-            throw new ResourceNotFoundException("dat không tồn tại");
-        }
-        return 0;
-    }
 
-    @Override
-    public long saveUser(UserRequestDTO request) throws MessagingException, UnsupportedEncodingException {
-        //Map userDTO thành user
-        User user = User.builder()
-                .firstName(request.getFirstName())
-                .lastName(request.getLastName())
-                .dateOfBirth(request.getDateOfBirth())
-                .gender(request.getGender())
-                .phone(request.getPhoneNumber())
-                .email(request.getEmail())
-                .username(request.getUsername())
-                .password(request.getPassword())
-                .status(request.getStatus())
-                .type(UserType.valueOf(request.getType().toUpperCase()))
-                .build();
-        //Lấy địa chỉ từ addressDTO, map nó qua Address và lưu nó vào db, trong saveAddress phải set lại user, nếu k sẽ k biết address này của user nào
-        request.getAddresses().forEach(a ->
-                user.saveAddress(addressMapper.toEntity(a)));
-        userRepository.save(user);
 
-        if(user.getId()!=null){
-            //send mail
-            mailService.sendConfirmLink(user.getEmail(),user.getId(),"scret-key");
-        }
-        log.info("User has added successfully, userId={}", user.getId());
-
-        return user.getId();
-    }
 
     @Override
     public long saveUser(User user){
@@ -109,20 +83,19 @@ public class UserServiceImpl implements UserService {
     @Override
     public void updateUser(long userId, UserRequestDTO request) {
         User user = getUserById(userId);
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setDateOfBirth(request.getDateOfBirth());
-        user.setGender(request.getGender());
-        user.setPhone(request.getPhoneNumber());
         if (!request.getEmail().equals(user.getEmail())) {
             // check email from database if not exist then allow update email otherwise throw exception
             user.setEmail(request.getEmail());
         }
+        user.setFirstName(request.getFirstName());
+        user.setLastName(request.getLastName());
+        user.setDateOfBirth(request.getDateOfBirth());
+        user.setGender(request.getGender());
+        user.setPhone(request.getPhone());
+
         user.setUsername(request.getUsername());
         user.setPassword(request.getPassword());
         user.setStatus(request.getStatus());
-        user.setType(UserType.valueOf(request.getType().toUpperCase()));
-        user.setAddresses(convertToAddress(request.getAddresses()));
         userRepository.save(user);
 
         log.info("User has updated successfully, userId={}", userId);
@@ -146,105 +119,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserDetailResponse getUser(Long userId) {
         User user = getUserById(userId);
-        return UserDetailResponse.builder()
-                .id(userId)
-                .firstName(user.getFirstName())
-                .lastName(user.getLastName())
-                .dateOfBirth(user.getDateOfBirth())
-                .gender(user.getGender())
-                .phone(user.getPhone())
-                .email(user.getEmail())
-                .username(user.getUsername())
-                .status(user.getStatus())
-                .type(UserType.valueOf(user.getType().name()))
-                .build();
-    }
-
-    @Override
-    public PageResponse getAllUsersWithSortBy(int pageNo, int pageSize, String sortBy) {
-        List<Sort.Order> sorts = new ArrayList<>();
-        if(StringUtils.hasLength(sortBy)){
-//            firstName:ASC | DESC
-            Pattern pattern = Pattern.compile("(\\w+?)(:)(.*)");
-            //Tạo máy dò matcher gắn pattern + sortBy vào
-            Matcher matcher = pattern.matcher(sortBy);
-            if(matcher.find()){
-                if(matcher.group(3).equalsIgnoreCase("asc")){
-                    sorts.add(new Sort.Order(Sort.Direction.ASC, matcher.group(1)));
-                }else{
-                    sorts.add(new Sort.Order(Sort.Direction.DESC, matcher.group(1)));
-                }
-            }
-        }
-        // Lấy dữ liệu phân trang từ DB
-        Pageable pageable = PageRequest.of(pageNo,pageSize, Sort.by(sorts));
-        Page<User> page = userRepository.findAll(pageable);
-        // Convert từng User entity -> UserDetailResponse (DTO để trả ra ngoài)
-        List<UserDetailResponse> list = page.stream().map(user -> UserDetailResponse.builder()
-                        .id(user.getId())
-                        .firstName(user.getFirstName())
-                        .lastName(user.getLastName())
-                        .dateOfBirth(user.getDateOfBirth())
-                        .gender(user.getGender())
-                        .phone(user.getPhone())
-                        .email(user.getEmail())
-                        .username(user.getUsername())
-                        .status(user.getStatus())
-                        .type(UserType.valueOf(user.getType().name()))
-                        .build())
-                .toList();
-        // Đóng gói kết quả vào PageResponse
-        return PageResponse.builder()
-                .pageNo(pageNo)
-                .pageSize(pageSize)
-                .totalPage(page.getTotalPages())
-                .items(list)
-                .build();
-    }
-    @Override
-    public PageResponse  getAllUsersWithSortByMultilColumn(int pageNo, int pageSize, String sortBy) {
-        List<Sort.Order> sorts = new ArrayList<>();
-        //hasText: check null + rỗng + toàn khoảng trắng
-        if (StringUtils.hasText(sortBy)) {
-            String[] sortByArr = sortBy.split(",");
-            for (String sortByStr : sortByArr) {
-                //    firstName:ASC | DESC
-                Pattern pattern = Pattern.compile("(\\w+?)(:)(.*)");
-                //Tạo máy dò matcher gắn pattern + sortBy vào
-                Matcher matcher = pattern.matcher(sortByStr);
-                if (matcher.find()) {
-                    if (matcher.group(3).equalsIgnoreCase("asc")) {
-                        sorts.add(new Sort.Order(Sort.Direction.ASC, matcher.group(1)));
-                    } else {
-                        sorts.add(new Sort.Order(Sort.Direction.DESC, matcher.group(1)));
-                    }
-                }
-            }
-        }
-        // Lấy dữ liệu phân trang từ DB
-        Pageable pageable = PageRequest.of(pageNo,pageSize, Sort.by(sorts));
-        Page<User> page = userRepository.findAll(pageable);
-        // Convert từng User entity -> UserDetailResponse (DTO để trả ra ngoài)
-        List<UserDetailResponse> list = page.stream().map(user -> UserDetailResponse.builder()
-                        .id(user.getId())
-                        .firstName(user.getFirstName())
-                        .lastName(user.getLastName())
-                        .dateOfBirth(user.getDateOfBirth())
-                        .gender(user.getGender())
-                        .phone(user.getPhone())
-                        .email(user.getEmail())
-                        .username(user.getUsername())
-                        .status(user.getStatus())
-                        .type(UserType.valueOf(user.getType().name()))
-                        .build())
-                .toList();
-        // Đóng gói kết quả vào PageResponse
-        return PageResponse.builder()
-                .pageNo(pageNo)
-                .pageSize(pageSize)
-                .totalPage(page.getTotalPages())
-                .items(list)
-                .build();
+        return userMapper.toDTO(user);
     }
 
     @Override

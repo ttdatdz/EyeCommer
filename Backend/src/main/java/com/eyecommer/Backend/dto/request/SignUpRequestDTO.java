@@ -13,7 +13,7 @@ import java.util.Set;
 public class SignUpRequestDTO {
     @NotBlank(message = "Username is required!")
     @Size(min= 3, message = "Username must have atleast 3 characters!")
-    @Size(max= 20, message = "Username can have have atmost 20 characters!")
+    @Size(max= 20, message = "Username can have have atmost 80 characters!")
     private String username;
 
     @Email(message = "Email is not in valid format!")
@@ -22,7 +22,7 @@ public class SignUpRequestDTO {
 
     @NotBlank(message = "Password is required!")
     @Size(min = 8, message = "Password must have atleast 8 characters!")
-    @Size(max = 20, message = "Password can have have atmost 20 characters!")
+    @Size(max = 20, message = "Password can have have atmost 30 characters!")
     private String password;
 
     private Set<String> roles;

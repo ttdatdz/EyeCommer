@@ -269,7 +269,6 @@ public class AuthenticationService {
         user.setEmail(request.getEmail());
         user.setPassword(encodedPassword);
         user.setStatus(UserStatus.ACTIVE);
-        user.setType(UserType.USER);
         user.setFirstName("");
         user.setLastName("");
         user.setDateOfBirth(new Date());

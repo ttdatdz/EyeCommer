@@ -32,16 +32,16 @@ public class SearchRepository {
     public PageResponse<?> getAllUsersAndSearchWithPagingAndSorting(int pageNo, int pageSize, String search, String sortBy) {
         log.info("Execute search user with keyword={}", search);
 
-        //Viết lệnh JPQL
-        StringBuilder sqlQuery = new StringBuilder("SELECT new com.example.demo.dto.response.UserDetailResponse(\n" +
+        // Viết lệnh JPQL - instantiate project's DTO package
+        StringBuilder sqlQuery = new StringBuilder("SELECT new com.eyecommer.Backend.dto.response.UserDetailResponse(\n" +
                 "    u.id, u.firstName, u.lastName, u.email, u.status, \n" +
                 "    u.gender, u.dateOfBirth, u.phone, u.username, u.type\n" +
                 ") FROM User u WHERE 1=1");
-        //Gắn thêm search vào lệnh JPQL
+        // Gắn thêm search vào lệnh JPQL (grouped to keep logic correct)
         if (StringUtils.hasLength(search)) {
-            sqlQuery.append(" AND lower(u.firstName) like lower(:firstName)");
+            sqlQuery.append(" AND (lower(u.firstName) like lower(:firstName) ");
             sqlQuery.append(" OR lower(u.lastName) like lower(:lastName)");
-            sqlQuery.append(" OR lower(u.email) like lower(:email)");
+            sqlQuery.append(" OR lower(u.email) like lower(:email))");
         }
         //Gắn thêm sort vào lệnh JPQL
         if (StringUtils.hasLength(sortBy)) {
@@ -54,7 +54,7 @@ public class SearchRepository {
         }
 
         // Lấy danh sách user theo câu lệnh đã build bên trên
-            //Tạo lệnh JPQL từ chuỗi đã build bên trên
+        //Tạo lệnh JPQL từ chuỗi đã build bên trên
         Query selectQuery = entityManager.createQuery(sqlQuery.toString());
         //Gắn giá trị search vào từng tham số firstName,lastName,email
         if (StringUtils.hasLength(search)) {
@@ -70,24 +70,19 @@ public class SearchRepository {
         List<?> users = selectQuery.getResultList();
 
         // Đếm record theo các điều kiện tìm kiếm
-            //build câu lệnh đếm record
-        StringBuilder sqlCountQuery = new StringBuilder("SELECT COUNT(*) FROM User u");
-        //Gắn điều kiện tìm kiếm
+        StringBuilder sqlCountQuery = new StringBuilder("SELECT COUNT(u) FROM User u WHERE 1=1");
         if (StringUtils.hasLength(search)) {
-            sqlCountQuery.append(" WHERE lower(u.firstName) like lower(?1)");
-            sqlCountQuery.append(" OR lower(u.lastName) like lower(?2)");
-            sqlCountQuery.append(" OR lower(u.email) like lower(?3)");
+            sqlCountQuery.append(" AND (lower(u.firstName) like lower(:firstName) ");
+            sqlCountQuery.append(" OR lower(u.lastName) like lower(:lastName)");
+            sqlCountQuery.append(" OR lower(u.email) like lower(:email))");
         }
-        //Tạo câu JPQL từ chuỗi đã build bên trên
         Query countQuery = entityManager.createQuery(sqlCountQuery.toString());
-        //Gắn giá trị vào các tham số trong JPQL
         if (StringUtils.hasLength(search)) {
-            countQuery.setParameter(1, String.format(LIKE_FORMAT, search));
-            countQuery.setParameter(2, String.format(LIKE_FORMAT, search));
-            countQuery.setParameter(3, String.format(LIKE_FORMAT, search));
-            countQuery.getSingleResult();
+            countQuery.setParameter("firstName", String.format(LIKE_FORMAT, search));
+            countQuery.setParameter("lastName", String.format(LIKE_FORMAT, search));
+            countQuery.setParameter("email", String.format(LIKE_FORMAT, search));
         }
-        //Thực thi truy vấn trả về kết quả duy nhất, ép sang kiểu long
+        // Thực thi truy vấn trả về kết quả duy nhất, ép sang kiểu long
         Long totalElements = (Long) countQuery.getSingleResult();
         log.info("totalElements={}", totalElements);
         //Tạo pageable(yêu cầu phân trang)
@@ -103,6 +98,7 @@ public class SearchRepository {
                 .items(users)
                 .build();
     }
+
 
 
     public PageResponse<?> searchUserByCriteria(int pageNo, int pageSize, String sortBy, String address, String... search) {

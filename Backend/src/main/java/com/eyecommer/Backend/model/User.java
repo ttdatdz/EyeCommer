@@ -57,19 +57,15 @@ public class User extends AbstractEntity<Long> implements UserDetails {
     private String profilePostalCode;
 
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+//    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "gender")
     private Gender gender;
 
     @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+//    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status")
     private UserStatus status;
 
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "type")
-    private UserType type;
 
     @OneToMany(mappedBy = "user")
     private Set<Order> orders;
