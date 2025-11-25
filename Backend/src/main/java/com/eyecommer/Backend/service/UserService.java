@@ -28,8 +28,9 @@ public interface UserService {
     UserDetailResponse getUser(Long userId);
 
     //Phân trang + sort + tìm kiếm
-    PageResponse<?> getAllUsersAndSearchWithPagingAndSorting(int pageNo, int pageSize, String search, String sortBy);
-    PageResponse<?> advanceSearchWithCriteria(int pageNo, int pageSize, String sortBy, String address, String... search);
+//    PageResponse<?> getAllUsersAndSearchWithPagingAndSorting(int pageNo, int pageSize, String search, String sortBy);
+    PageResponse<?> getAllUser(int pageNo, int pageSize, String sortBy,String[] search);
+    PageResponse<?> getAllStaff(int pageNo, int pageSize, String sortBy,String[] search);
 
     String confirmUser(int userId, String verifyCode);
 

@@ -40,15 +40,6 @@ public class UserController {
     private final AuthenticationService authenticationService;
 
 
-//    @PostMapping
-//    public ResponseData<Long> addUser(@Valid @RequestBody UserRequestDTO request) {
-//        try {
-//            long userId = userService.createUser(request);
-//            return new ResponseData<>(HttpStatus.CREATED.value(), Translator.toLocale("user.add.success"), userId);
-//        } catch (Exception e) {
-//            return new ResponseError(HttpStatus.BAD_REQUEST.value(), e.getMessage());
-//        }
-//    }
 
     @GetMapping("/confirm/{userId}")
     public ResponseData<String> confirm(@Min(1) @PathVariable int userId, @RequestParam String verifyCode) {
@@ -63,18 +54,6 @@ public class UserController {
         }
     }
 
-//    @PatchMapping("/{userId}")
-//    public ResponseData<Void> updateUser(@Min(1) @PathVariable long userId, @RequestParam UserStatus status) {
-//        log.info("Request change status, userId={}", userId);
-//
-//        try {
-//            userService.changeStatus(userId, status);
-//            return new ResponseData<>(HttpStatus.ACCEPTED.value(), Translator.toLocale("user.change.success"));
-//        } catch (Exception e) {
-//            log.error(ERROR_MESSAGE, e.getMessage(), e.getCause());
-//            return new ResponseError(HttpStatus.BAD_REQUEST.value(), "Change status fail");
-//        }
-//    }
     @DeleteMapping("/{userId}")
     @PreAuthorize("hasAuthority('admin')")
     public ResponseData<Void> deleteUser(@PathVariable @Min(value = 1, message = "userId must be greater than 0") long userId) {
@@ -98,38 +77,26 @@ public class UserController {
         }
     }
 
-    @GetMapping("/list-user-and-search-with-paging-and-sorting")
-    public ResponseData<?> getAllUsersAndSearchWithPagingAndSorting(@RequestParam(defaultValue = "0", required = false) int pageNo,
-                                                                    @RequestParam(defaultValue = "20", required = false) int pageSize,
-                                                                    @RequestParam(required = false) String search,
-                                                                    @RequestParam(required = false) String sortBy) {
-        log.info("Request get list of users and search with paging and sorting");
-        try{
-            PageResponse<?> users = userService.getAllUsersAndSearchWithPagingAndSorting(pageNo, pageSize, search, sortBy);
-            return new ResponseData<>(HttpStatus.OK.value(), "users", users);
-        }catch(Exception e){
-            log.error(ERROR_MESSAGE, e.getMessage(), e.getCause());
-            return new ResponseError(HttpStatus.BAD_REQUEST.value(), e.getMessage());
-        }
+    @GetMapping
+    public ResponseData<?> advanceSearchWithCriteria(
+            @RequestParam(defaultValue = "0") int pageNo,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = "") String[] search) {
 
-    }
-
-    @GetMapping("/advance-search-with-criteria")
-    public ResponseData<?> advanceSearchWithCriteria(@RequestParam(defaultValue = "0", required = false) int pageNo,
-                                                     @RequestParam(defaultValue = "20", required = false) int pageSize,
-                                                     @RequestParam(required = false) String sortBy,
-                                                     @RequestParam(required = false) String address,
-                                                     @RequestParam(defaultValue = "") String... search) {
         log.info("Request advance search query by criteria");
         try{
-            return new ResponseData<>(HttpStatus.OK.value(), "users", userService.advanceSearchWithCriteria(pageNo,
-                    pageSize, sortBy, address, search));
-        }catch(Exception e){
+            return new ResponseData<>(
+                    HttpStatus.OK.value(),
+                    "users",
+                    userService.getAllUser(pageNo, pageSize, sortBy,search)
+            );
+        } catch(Exception e){
             log.error(ERROR_MESSAGE, e.getMessage(), e.getCause());
             return new ResponseError(HttpStatus.BAD_REQUEST.value(), e.getMessage());
         }
-
     }
+
     @PostMapping("/change-password")
     public ResponseData<String> changePassword(@RequestBody @Valid ChangePasswordDTO request) {
         try {

@@ -31,69 +31,9 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
-    private final UserService userService;
     private final UserHasRoleRepository userHasRoleRepository;
     private final UserMapper userMapper;
 
-//    @Override
-//    public PageResponse getAll(int pageNo, int pageSize, String search, String sortBy) {
-//        PageResponse<?> page = userService.getAllUsersAndSearchWithPagingAndSorting(pageNo, pageSize, search, sortBy);
-//        List<?> items = (List<?>) page.getItems();
-//        List<EmployeeResponseDTO> mapped = new ArrayList<>();
-//        // We want only users with role 'staff'. The repository may return User entities or DTOs.
-//        // Strategy: for User entities, check roles directly; for DTO items (which lack role info),
-//        // batch-load User entities by id and check their roles before mapping.
-//        java.util.List<Long> dtoIdsToResolve = new java.util.ArrayList<>();
-//        java.util.Map<Long, Object> dtoById = new java.util.HashMap<>();
-//
-//        if (items != null) {
-//            for (Object it : items) {
-//                if (it instanceof User) {
-//                    User u = (User) it;
-//                    boolean isStaff = u.getRoles() != null && u.getRoles().stream()
-//                            .anyMatch(uh -> uh.getRole() != null && "staff".equalsIgnoreCase(uh.getRole().getName()));
-//                    if (isStaff) mapped.add(mapper.toDTO(u));
-//                    continue;
-//                }
-//
-//                // If repository returned the project's DTO, collect id to resolve role
-//                Long id = null;
-//                if (it instanceof com.eyecommer.Backend.dto.response.UserDetailResponse) {
-//                    id = ((com.eyecommer.Backend.dto.response.UserDetailResponse) it).getId();
-//                }
-//
-//                if (id != null) {
-//                    dtoIdsToResolve.add(id);
-//                    dtoById.put(id, it);
-//                }
-//            }
-//        }
-//
-//        // Batch load users for DTO ids and map only those with staff role
-//        if (!dtoIdsToResolve.isEmpty()) {
-//            Iterable<User> users = userRepository.findAllById(dtoIdsToResolve);
-//            java.util.Map<Long, User> userMap = new java.util.HashMap<>();
-//            users.forEach(u -> userMap.put(u.getId(), u));
-//
-//            for (Long id : dtoIdsToResolve) {
-//                User u = userMap.get(id);
-//                if (u == null) continue;
-//                boolean isStaff = u.getRoles() != null && u.getRoles().stream()
-//                        .anyMatch(uh -> uh.getRole() != null && "staff".equalsIgnoreCase(uh.getRole().getName()));
-//                if (!isStaff) continue;
-//
-//                // Prefer mapping from full entity to ensure consistent fields
-//                mapped.add(mapper.toDTO(u));
-//            }
-//        }
-//
-//        return PageResponse.builder()
-//                .pageNo(page.getPageNo())
-//                .pageSize(page.getPageSize())
-//                .totalPage(page.getTotalPage())
-//                .items(mapped)
-//                .build();
-//    }
 
 
     @Override

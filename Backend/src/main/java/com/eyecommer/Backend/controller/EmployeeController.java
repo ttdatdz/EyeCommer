@@ -5,6 +5,7 @@ import com.eyecommer.Backend.dto.request.UserRequestDTO;
 import com.eyecommer.Backend.dto.request.UserUpdateRequestDTO;
 import com.eyecommer.Backend.dto.response.*;
 import com.eyecommer.Backend.service.UserService;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,25 +26,31 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/staff")
 @RequiredArgsConstructor
+@Slf4j
 public class EmployeeController {
 
     private final EmployeeService employeeService;
     private final UserService userService;
-//    @GetMapping
-//    @PreAuthorize("hasAuthority('admin')")
-//    public ResponseData<PageResponse> getAll(
-//            @RequestParam(defaultValue = "0") int pageNo,
-//            @RequestParam(defaultValue = "10") int pageSize,
-//            @RequestParam(required = false) String search,
-//            @RequestParam(required = false) String sortBy
-//    ) {
-//        try {
-//            PageResponse resp = employeeService.getAll(pageNo, pageSize, search, sortBy);
-//            return new ResponseData<>(200, "Success", resp);
-//        } catch (Exception e) {
-//            return new ResponseData<>(400, "Failed: " + e.getMessage());
-//        }
-//    }
+    @GetMapping
+    @PreAuthorize("hasAuthority('admin')")
+    public ResponseData<?> advanceSearchWithCriteria(
+            @RequestParam(defaultValue = "0") int pageNo,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = "") String[] search) {
+
+        log.info("Request advance search query by criteria");
+        try{
+            return new ResponseData<>(
+                    HttpStatus.OK.value(),
+                    "users",
+                    userService.getAllStaff(pageNo, pageSize, sortBy,search)
+            );
+        } catch(Exception e){
+//            log.error(ERROR_MESSAGE, e.getMessage(), e.getCause());
+            return new ResponseError(HttpStatus.BAD_REQUEST.value(), e.getMessage());
+        }
+    }
     @PostMapping
     @PreAuthorize("hasAuthority('admin')")
     public ResponseData<?> create(@RequestBody @Valid UserRequestDTO dto) {
