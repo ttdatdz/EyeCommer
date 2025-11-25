@@ -2,6 +2,7 @@ package com.eyecommer.Backend.service;
 
 import com.eyecommer.Backend.dto.request.CategoryRequestDTO;
 import com.eyecommer.Backend.dto.response.CategoryResponseDTO;
+import com.eyecommer.Backend.dto.response.PageResponse;
 import com.eyecommer.Backend.model.Category;
 import java.util.List;
 import java.util.Optional;
@@ -14,9 +15,8 @@ public interface CategoryService {
     // UPDATE: Cập nhật danh mục
     CategoryResponseDTO update(Long id, CategoryRequestDTO request);
 
-    // READ All: Lấy tất cả danh mục (trả về DTO List)
-    List<CategoryResponseDTO> findAll();
 
+    PageResponse<?> getAllCategory(int pageNo, int pageSize, String sortBy, String[] search);
     // READ By ID: Lấy danh mục theo ID (trả về DTO Optional)
     CategoryResponseDTO findById(Long id);
 

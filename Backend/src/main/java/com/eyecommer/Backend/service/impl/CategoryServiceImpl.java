@@ -2,14 +2,19 @@ package com.eyecommer.Backend.service.impl;
 
 import com.eyecommer.Backend.dto.request.CategoryRequestDTO;
 import com.eyecommer.Backend.dto.response.CategoryResponseDTO;
+import com.eyecommer.Backend.dto.response.PageResponse;
 import com.eyecommer.Backend.exception.ResourceNotFoundException;
 import com.eyecommer.Backend.mapper.CategoryMapper;
 import com.eyecommer.Backend.model.Category;
 import com.eyecommer.Backend.repository.CategoryRepository;
+import com.eyecommer.Backend.repository.GenericSearchRepository;
 import com.eyecommer.Backend.repository.ProductCategoryRepository;
+import com.eyecommer.Backend.repository.critetia.GenericSearchQueryCriteriaConsumer;
+import com.eyecommer.Backend.repository.critetia.SearchCriteria;
+import com.eyecommer.Backend.repository.critetia.SearchQueryCriteriaConsumer;
 import com.eyecommer.Backend.service.CategoryService; // Import Interface
+import com.eyecommer.Backend.utils.SearchCriteriaUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +28,8 @@ public class CategoryServiceImpl implements CategoryService { // Triển khai In
     private final CategoryRepository categoryRepository;
     private final CategoryMapper mapper;
     private final ProductCategoryRepository productCategoryRepository;
+    private final GenericSearchRepository genericSearchRepository;
+    private final CategoryMapper categoryMapper;
 
     // CREATE / UPDATE: Lưu (tạo mới hoặc cập nhật) danh mục
     @Override
@@ -52,13 +59,35 @@ public class CategoryServiceImpl implements CategoryService { // Triển khai In
         return mapper.toDTO(updatedCategory);
     }
 
-    // READ All
-    @Override
-    public List<CategoryResponseDTO> findAll() {
-        List<Category> categories = categoryRepository.findAll();
-        return mapper.toDTOList(categories);
-    }
 
+    public PageResponse<?> getAllCategory(int pageNo, int pageSize, String sortBy, String[] search) {
+
+        // convert search -> criteria
+        List<SearchCriteria> criteriaList = SearchCriteriaUtils.convert(search);
+        SearchQueryCriteriaConsumer<Category> consumer =
+                new GenericSearchQueryCriteriaConsumer<>(null, null, null);
+
+        // dùng generic search repo
+        PageResponse<?> rawPage = genericSearchRepository.searchByCriteria(
+                Category.class,
+                pageNo,
+                pageSize,
+                criteriaList,
+                sortBy,
+                consumer
+        );
+
+        List<Category> categories = (List<Category>) rawPage.getItems();
+
+        List<CategoryResponseDTO> dtoList = categoryMapper.toDTOList(categories);
+
+        return PageResponse.<List<CategoryResponseDTO>>builder()
+                .pageNo(rawPage.getPageNo())
+                .pageSize(rawPage.getPageSize())
+                .totalPage(rawPage.getTotalPage())
+                .items(dtoList)
+                .build();
+    }
     // READ By ID
     @Override
     public CategoryResponseDTO findById(Long id) {

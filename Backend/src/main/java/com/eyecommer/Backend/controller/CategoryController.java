@@ -37,23 +37,17 @@ public class CategoryController {
     // --- READ ALL (Lấy tất cả) ---
     // GET /api/categories
     @GetMapping
-    public ResponseEntity<ResponseData<List<CategoryResponseDTO>>> getAllCategories() {
-        List<CategoryResponseDTO> categories = categoryService.findAll();
-
-        if (categories.isEmpty()) {
-            ResponseData<List<CategoryResponseDTO>> response = new ResponseData<>(
-                    HttpStatus.NO_CONTENT.value(),
-                    "Không tìm thấy danh mục nào"
-            );
-            return new ResponseEntity<>(response, HttpStatus.OK); // Trả về 200 OK với data rỗng
+    public ResponseData<?> getAllCategories(
+            @RequestParam(defaultValue = "0") int pageNo,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = "") String[] search) {
+        try {
+            return new ResponseData<>( HttpStatus.CREATED.value(),"Lấy danh sách danh mục thành công",categoryService.getAllCategory(pageNo,pageSize,sortBy,search)); // Mã 201
+        } catch (Exception e) {
+            // Xử lý lỗi nếu có (ví dụ: tên danh mục bị trùng unique constraint)
+            return new ResponseData<>( HttpStatus.INTERNAL_SERVER_ERROR.value(),"Lấy danh sách danh mục thất bại vì: " +e.getMessage());
         }
-
-        ResponseData<List<CategoryResponseDTO>> response = new ResponseData<>(
-                HttpStatus.OK.value(),
-                "Lấy danh sách danh mục thành công",
-                categories
-        );
-        return ResponseEntity.ok(response); // HTTP 200
     }
 
     // --- READ BY ID (Lấy theo ID)---

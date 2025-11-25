@@ -43,12 +43,12 @@ public class EmployeeController {
         try{
             return new ResponseData<>(
                     HttpStatus.OK.value(),
-                    "users",
+                    "Lấy danh sách Staff thành công",
                     userService.getAllStaff(pageNo, pageSize, sortBy,search)
             );
         } catch(Exception e){
 //            log.error(ERROR_MESSAGE, e.getMessage(), e.getCause());
-            return new ResponseError(HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return new ResponseError(HttpStatus.BAD_REQUEST.value(),"Lấy danh sách staff thất bại vì: "+ e.getMessage());
         }
     }
     @PostMapping
