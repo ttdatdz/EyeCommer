@@ -29,7 +29,13 @@ public class ProductServiceImpl implements ProductService {
     private final AttributeRepository attributeRepository;
     private final VariantProductRepository variantProductRepository;
     private final GenericSearchRepository genericSearchRepository;
-
+    private final OrderRepository orderRepository;
+    // Danh sách các trạng thái đơn hàng được coi là "đang xử lý"
+    private static final List<String> PENDING_STATUSES = List.of(
+            "PENDING", //Đơn hàng vừa được đặt (Chờ xác nhận thanh toán/tồn kho).
+            "PROCESSING", // Đơn hàng đã được xác nhận. Đang đóng gói hoặc đã giao cho đơn vị vận chuyển nhưng chưa lấy.
+            "SHIPPED" //Shipper đã lấy hàng (Đang trên đường giao). Xóa sản phẩm khiến hệ thống mất khả năng theo dõi, cập nhật trạng thái nhận hàng, hoặc xử lý trả hàng/hoàn tiền sau này.
+    );
     @Override
     @Transactional
     public List<ProductResponseDTO> createProduct(List<ProductRequestDTO> requests) {
@@ -255,9 +261,46 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public void deleteProduct(Long id) {
+
+        //3 trường hợp không được xóa.
+        // Thứ nhất biến thể của sản phẩm vẫn còn tồn kho(stock>0). Vì ngừng bán thì số sản phẩm đó sẽ k biết xử lý ra sao.Nên an toàn thì chỉ cho xóa khi stock =0
+        //Thứ 2. Không được xóa khi vẫn còn người đặt hàng. Để tránh TH2 ta chỉ nên cho xóa khi stock = 0
+        //Thứ 3. Không được xóa khi đơn hàng đặt biến thể của sản phẩm này vẫn đang trong trạng thái pending, processing, shipped
         Product product = findProductOrThrow(id);
-        // Nhờ CascadeType.ALL, các biến thể và liên kết Category sẽ bị xóa.
-        productRepository.delete(product);
+
+        // --- 1. KIỂM TRA ĐƠN HÀNG ĐANG CHỜ XỬ LÝ ---
+        if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+            Set<VariantProduct> variants = product.getVariants();
+
+            // Lấy tất cả IDs của các biến thể (VariantProduct) thuộc sản phẩm này
+            Set<Long> variantIds = variants.stream()
+                    .map(VariantProduct::getId)
+                    .collect(Collectors.toSet());
+
+            // Truy vấn DB: Kiểm tra xem có đơn hàng nào đang PENDING liên quan không
+            long pendingOrderCount = orderRepository.countPendingOrderItemsByVariantIds(
+                    variantIds,
+                    PENDING_STATUSES
+            );
+
+            if (pendingOrderCount > 0) {
+                throw new RuntimeException("Không thể xóa sản phẩm. Có " + pendingOrderCount +
+                        " đơn hàng đang xử lý hoặc chưa hoàn tất liên quan đến sản phẩm này.");
+            }
+
+            // --- 2. KIỂM TRA TỒN KHO ---
+            boolean hasStock = variants.stream()
+                    .anyMatch(v -> v.getStock() != null && v.getStock() > 0);
+
+            if (hasStock) {
+                throw new RuntimeException("Không thể xóa sản phẩm.Sản phẩm vẫn còn tồn kho.");
+            }
+        }
+
+        // --- 3. THỰC HIỆN XÓA MỀM (SOFT DELETE) ---
+        // Tồn kho = 0 và không có đơn hàng đang xử lý -> INACTIVE
+        product.setStatus("INACTIVE");
+        productRepository.save(product);
     }
     private Product findProductOrThrow(Long id) {
         return productRepository.findById(id)

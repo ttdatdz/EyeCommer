@@ -1,30 +1,46 @@
 package com.eyecommer.Backend.dto.request;
 
-import lombok.Data;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
+
 import java.util.List;
 
 @Getter
 @Setter
 public class ProductUpdateRequestDTO {
+
     // 1. THÔNG TIN CƠ BẢN CỦA PRODUCT
-    // Lưu ý: Đối với PUT, bạn nên gửi toàn bộ các trường này,
-    // ngay cả khi không thay đổi. Nếu dùng PATCH, các trường này có thể là Optional.
+
+    @NotBlank(message = "Tên sản phẩm không được để trống.")
     private String name;
+
+    @NotBlank(message = "Mô tả chi tiết không được để trống.")
     private String description;
+
+    @NotNull(message = "Giá cơ bản không được để trống.")
     private Double price;
+
+    @NotBlank(message = "Trạng thái sản phẩm không được để trống.")
     private String status;
+
+    @NotBlank(message = "URL hình ảnh thumbnail không được để trống.")
     private String thumbnailUrl;
+
+    @NotBlank(message = "Mô tả ngắn không được để trống.")
     private String shortDescription;
 
     // 2. CẬP NHẬT DANH MỤC (N-M)
-    // List ID mới sẽ GHI ĐÈ lên danh sách cũ
+
+    @NotNull(message = "Danh sách Category IDs không được thiếu.")
     private List<Long> categoryIds;
 
     // 3. CẬP NHẬT BIẾN THỂ (1-N)
-    // List này phải bao gồm TẤT CẢ các biến thể mới và cũ.
-    // Logic của Service sẽ dựa vào ID của từng VariantProductRequestDTO để biết nên UPDATE hay CREATE mới.
+
+    // Đảm bảo list biến thể không bị thiếu và validate từng phần tử bên trong
+    @NotNull(message = "Danh sách biến thể không được để trống.")
+    @Valid // Annotation này cần thiết để kích hoạt validation trên các phần tử List bên trong (VariantProductUpdateDTO)
     private List<VariantProductUpdateDTO> variantProducts;
-    // LƯU Ý: Phải sử dụng DTO riêng biệt cho Update Biến thể.
 }

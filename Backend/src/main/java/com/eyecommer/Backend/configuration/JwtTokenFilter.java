@@ -42,7 +42,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
         }
         if (StringUtils.isBlank(authorization) || !authorization.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
-            log.info("----------chay vao day ----------");
+            log.info("----------Thiếu token.Nên bỏ qua----------");
             return;
         }
         final String token = authorization.substring("Bearer ".length());
