@@ -13,11 +13,8 @@ public class ProductResponseDTO {
     private String status;
     private String thumbnailUrl;
     private String shortDescription;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
-
     // Mối quan hệ 1-N: Danh sách các biến thể
-    private Set<VariantProductResponseDTO> variants;
+    private Set<VariantProductResponseDTO> variantProducts;
 
     //  Danh sách các danh mục (bao gồm cả trạng thái isDefault)
     private Set<CategoryResponseDTO> categories;

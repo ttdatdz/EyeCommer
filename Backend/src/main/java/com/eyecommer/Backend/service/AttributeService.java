@@ -3,22 +3,20 @@ package com.eyecommer.Backend.service;
 import com.eyecommer.Backend.dto.request.VariantRequestDTO;
 import com.eyecommer.Backend.dto.request.VariantUpdateDTO;
 import com.eyecommer.Backend.dto.response.PageResponse;
-import com.eyecommer.Backend.dto.response.VariantResponseDTO;
+import com.eyecommer.Backend.dto.response.AttributeResponseDTO;
 
-import java.util.List;
-
-public interface VariantService {
+public interface AttributeService {
     // CREATE
-    VariantResponseDTO createVariant(VariantRequestDTO requestDTO);
+    AttributeResponseDTO createVariant(VariantRequestDTO requestDTO);
 
     // READ ALL
 
     PageResponse<?> getAllVariants(int pageNo, int pageSize, String sortBy, String[] search);
     // READ DETAIL
-    VariantResponseDTO getVariantById(Long id);
+    AttributeResponseDTO getVariantById(Long id);
 
     // UPDATE
-    VariantResponseDTO updateVariant(Long id, VariantUpdateDTO requestDTO);
+    AttributeResponseDTO updateVariant(Long id, VariantUpdateDTO requestDTO);
 
     // DELETE
     void deleteVariant(Long id);

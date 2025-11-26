@@ -18,5 +18,5 @@ public class ProductRequestDTO {
     private List<Long> categoryIds;
 
     // Danh sách các biến thể ban đầu
-    private List<VariantProductRequestDTO> variants;
+    private List<VariantProductRequestDTO> variantProducts;
 }

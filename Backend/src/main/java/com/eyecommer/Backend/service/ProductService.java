@@ -4,6 +4,8 @@ import com.eyecommer.Backend.dto.request.ProductRequestDTO;
 import com.eyecommer.Backend.dto.response.ProductResponseDTO;
 import com.eyecommer.Backend.model.Product;
 
+import java.util.List;
+
 public interface ProductService {
-    ProductResponseDTO createProduct(ProductRequestDTO productRequestDTO);
+    List<ProductResponseDTO> createProduct(List<ProductRequestDTO> productRequestDTO);
 }

@@ -1,37 +1,37 @@
 package com.eyecommer.Backend.mapper;
 
 import com.eyecommer.Backend.dto.request.VariantRequestDTO;
-import com.eyecommer.Backend.dto.response.VariantResponseDTO;
-import com.eyecommer.Backend.model.Variant;
+import com.eyecommer.Backend.dto.response.AttributeResponseDTO;
+import com.eyecommer.Backend.model.Attribute;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
-public class VariantMapper {
+public class AttributeMapper {
 
     /**
      * Chuyển đổi VariantRequestDTO sang Variant Entity (toEntity).
      */
-    public Variant toEntity(VariantRequestDTO dto) {
+    public Attribute toEntity(VariantRequestDTO dto) {
         if (dto == null) return null;
 
-        Variant variant = new Variant();
-        variant.setName(dto.getName());
-        variant.setDescription(dto.getDescription());
+        Attribute attribute = new Attribute();
+        attribute.setName(dto.getName());
+        attribute.setDescription(dto.getDescription());
         // Bỏ qua các mối quan hệ (variantProductAttributes)
 
-        return variant;
+        return attribute;
     }
 
     /**
      * Chuyển đổi Variant Entity sang VariantResponseDTO (toDTO).
      */
-    public VariantResponseDTO toDTO(Variant entity) {
+    public AttributeResponseDTO toDTO(Attribute entity) {
         if (entity == null) return null;
 
-        VariantResponseDTO dto = new VariantResponseDTO();
+        AttributeResponseDTO dto = new AttributeResponseDTO();
         dto.setId(entity.getId());
         dto.setName(entity.getName());
         dto.setDescription(entity.getDescription());
@@ -41,7 +41,7 @@ public class VariantMapper {
     /**
      * Chuyển List<Variant Entity> sang List<VariantResponseDTO> (toDTOList).
      */
-    public List<VariantResponseDTO> toDTOList(List<Variant> entities) {
+    public List<AttributeResponseDTO> toDTOList(List<Attribute> entities) {
         return entities.stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());

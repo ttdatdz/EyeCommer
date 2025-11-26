@@ -4,26 +4,24 @@ import com.eyecommer.Backend.dto.request.VariantRequestDTO;
 import com.eyecommer.Backend.dto.request.VariantUpdateDTO;
 import com.eyecommer.Backend.dto.response.PageResponse;
 import com.eyecommer.Backend.dto.response.ResponseData;
-import com.eyecommer.Backend.dto.response.VariantResponseDTO;
-import com.eyecommer.Backend.service.VariantService;
+import com.eyecommer.Backend.dto.response.AttributeResponseDTO;
+import com.eyecommer.Backend.service.AttributeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/variants")
 public class VariantController {
 
     @Autowired
-    private VariantService variantService;
+    private AttributeService attributeService;
 
     // 1. CREATE (POST)
     @PostMapping
     public ResponseData<?> createVariant(@RequestBody VariantRequestDTO requestDTO) {
         try {
-            VariantResponseDTO response = variantService.createVariant(requestDTO);
+            AttributeResponseDTO response = attributeService.createVariant(requestDTO);
             return new ResponseData<>(HttpStatus.CREATED.value(), "Tạo Thuộc tính (Variant) thành công", response);
         } catch (Exception e) {
             return new ResponseData<>(HttpStatus.BAD_REQUEST.value(), "Tạo Thuộc tính (Variant) thất bại vì: " + e.getMessage());
@@ -39,7 +37,7 @@ public class VariantController {
             @RequestParam(defaultValue = "") String[] search) {
         try {
             // Gọi Service với các tham số phân trang, sắp xếp, tìm kiếm
-            PageResponse<?> pageResponse = variantService.getAllVariants(pageNo, pageSize, sortBy, search);
+            PageResponse<?> pageResponse = attributeService.getAllVariants(pageNo, pageSize, sortBy, search);
 
             // Mã 200 OK vì đây là thao tác lấy dữ liệu thành công
             return new ResponseData<>( HttpStatus.OK.value(),"Lấy danh sách Thuộc tính thành công", pageResponse);
@@ -54,7 +52,7 @@ public class VariantController {
     @GetMapping("/{id}")
     public ResponseData<?> getVariantById(@PathVariable Long id) {
         try {
-            VariantResponseDTO response = variantService.getVariantById(id);
+            AttributeResponseDTO response = attributeService.getVariantById(id);
             return new ResponseData<>(HttpStatus.OK.value(), "Lấy chi tiết Thuộc tính thành công", response);
         } catch (Exception e) {
             // Thường là ResourceNotFoundException
@@ -68,7 +66,7 @@ public class VariantController {
             @PathVariable Long id,
             @RequestBody VariantUpdateDTO requestDTO) {
         try {
-            VariantResponseDTO response = variantService.updateVariant(id, requestDTO);
+            AttributeResponseDTO response = attributeService.updateVariant(id, requestDTO);
             return new ResponseData<>(HttpStatus.OK.value(), "Cập nhật Thuộc tính thành công", response);
         } catch (Exception e) {
             // Thường là ResourceNotFoundException hoặc lỗi Validation
@@ -80,7 +78,7 @@ public class VariantController {
     @DeleteMapping("/{id}")
     public ResponseData<?> deleteVariant(@PathVariable Long id) {
         try {
-            variantService.deleteVariant(id);
+            attributeService.deleteVariant(id);
             return new ResponseData<>(HttpStatus.OK.value(), "Xóa Thuộc tính thành công");
         } catch (Exception e) {
             // Thường là ResourceNotFoundException hoặc lỗi Khóa ngoại (Constraint Violation)

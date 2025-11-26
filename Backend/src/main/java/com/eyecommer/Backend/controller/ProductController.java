@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/products")
 public class ProductController {
@@ -24,12 +26,12 @@ public class ProductController {
      * @return ResponseEntity<Product> chứa sản phẩm đã được tạo
      */
     @PostMapping
-    public ResponseData<?> createProduct(@RequestBody ProductRequestDTO request) {
+    public ResponseData<?> createProduct(@RequestBody List<ProductRequestDTO>  request) {
         try {
 
-            ProductResponseDTO newProduct = productService.createProduct(request);
+            List<ProductResponseDTO> listNewProduct = productService.createProduct(request);
 
-            return new ResponseData<>(HttpStatus.CREATED.value(), "Tạo Product thành công", newProduct);
+            return new ResponseData<>(HttpStatus.CREATED.value(), "Tạo Product thành công", listNewProduct);
 
         } catch (Exception e) {
 

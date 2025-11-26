@@ -18,8 +18,8 @@ public class VariantProductAttribute extends AbstractEntity<Long> {
 
     // Khóa ngoại 2: Liên kết N-1 tới Variant (Thuộc tính)
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "variant_id", nullable = false)
-    private Variant variant;
+    @JoinColumn(name = "attribute_id", nullable = false)
+    private Attribute attribute;
 
     // Ví dụ: Có thể thêm trường metadata (nếu cần)
     // @Column(name = "display_order")

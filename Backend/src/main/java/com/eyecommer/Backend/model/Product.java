@@ -34,8 +34,7 @@ public class Product extends AbstractEntity<Long> {
     // Quan hệ 1-N tới bảng trung gian ProductCategory
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<ProductCategory> productCategories;
-
-    @OneToMany(mappedBy = "product")
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<VariantProduct> variants;
 
 //    @OneToMany(mappedBy = "product")

@@ -1,6 +1,10 @@
 package com.eyecommer.Backend.dto.request;
 
+import com.eyecommer.Backend.dto.response.VariantImageResponseDTO;
 import lombok.Data;
+
+import java.util.List;
+import java.util.Set;
 
 @Data
 public class VariantProductRequestDTO {
@@ -8,8 +12,7 @@ public class VariantProductRequestDTO {
     private Double price; // Giá bán của biến thể này
     private Integer stock; // Tồn kho của biến thể này
 
-    // Giả định bạn có DTO cho Attributes và Images,
-    // tạm thời đơn giản hóa cho ví dụ này.
-    // private List<VariantAttributeRequest> attributes;
-    // private List<VariantImageRequest> images;
+    private List<Long> variantAttributeIds;
+    // TRƯỜNG MỚI: Danh sách hình ảnh liên quan đến SKU
+    private Set<VariantImageRequestDTO> images;
 }

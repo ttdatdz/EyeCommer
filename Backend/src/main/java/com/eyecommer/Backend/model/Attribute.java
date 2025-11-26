@@ -7,10 +7,10 @@ import lombok.Setter;
 import java.util.Set;
 
 @Entity
-@Table(name = "Variant")
+@Table(name = "Attribute")
 @Getter
 @Setter
-public class Variant extends AbstractEntity<Long> {
+public class Attribute extends AbstractEntity<Long> {
     @Column(name = "name")
     private String name;
 
@@ -18,7 +18,7 @@ public class Variant extends AbstractEntity<Long> {
     private String description;
 
     // Một thuộc tính (Variant) có thể được sử dụng bởi Nhiều (N) SKU.
-    @OneToMany(mappedBy = "variant", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "attribute", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<VariantProductAttribute> variantProductAttributes; // Tên mới
 
 

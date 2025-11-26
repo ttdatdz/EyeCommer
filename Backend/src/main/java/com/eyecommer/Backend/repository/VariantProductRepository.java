@@ -4,7 +4,11 @@ import com.eyecommer.Backend.model.VariantProduct;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
+
 @Repository
 public interface VariantProductRepository extends JpaRepository<VariantProduct, Long> {
-    // Không cần method tùy chỉnh cho thao tác CREATE
+
+    List<VariantProduct> findAllBySkuIn(Collection<String> skus);
 }
