@@ -1,15 +1,18 @@
 package com.eyecommer.Backend.service.impl;
 
 import com.eyecommer.Backend.dto.request.ProductRequestDTO;
+import com.eyecommer.Backend.dto.request.ProductUpdateRequestDTO;
 import com.eyecommer.Backend.dto.request.VariantProductRequestDTO;
+import com.eyecommer.Backend.dto.response.PageResponse;
 import com.eyecommer.Backend.dto.response.ProductResponseDTO;
 import com.eyecommer.Backend.mapper.ProductMapper;
 import com.eyecommer.Backend.model.*;
-import com.eyecommer.Backend.repository.CategoryRepository;
-import com.eyecommer.Backend.repository.ProductRepository;
-import com.eyecommer.Backend.repository.AttributeRepository;
-import com.eyecommer.Backend.repository.VariantProductRepository;
+import com.eyecommer.Backend.repository.*;
+import com.eyecommer.Backend.repository.critetia.GenericSearchQueryCriteriaConsumer;
+import com.eyecommer.Backend.repository.critetia.SearchCriteria;
+import com.eyecommer.Backend.repository.critetia.SearchQueryCriteriaConsumer;
 import com.eyecommer.Backend.service.ProductService;
+import com.eyecommer.Backend.utils.SearchCriteriaUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +28,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final AttributeRepository attributeRepository;
     private final VariantProductRepository variantProductRepository;
+    private final GenericSearchRepository genericSearchRepository;
 
     @Override
     @Transactional
@@ -184,5 +188,79 @@ public class ProductServiceImpl implements ProductService {
         }
 
         product.setProductCategories(pcs);
+    }
+    // --- READ ALL (GET ALL) ---
+    @Override
+    public PageResponse<?> getAllProducts(int pageNo, int pageSize, String sortBy, String[] search) {
+        // 1. Convert search -> criteria
+        List<SearchCriteria> criteriaList = SearchCriteriaUtils.convert(search);
+
+        // 2. Khởi tạo Consumer (Filter mặc định)
+        SearchQueryCriteriaConsumer<Product> consumer =
+                new GenericSearchQueryCriteriaConsumer<>(null, null, null);
+
+        // 3. Sử dụng generic search repo để lấy PageResponse thô
+        PageResponse<?> rawPage = genericSearchRepository.searchByCriteria(
+                Product.class, // Tìm kiếm trên Entity Product
+                pageNo,
+                pageSize,
+                criteriaList,
+                sortBy,
+                consumer
+        );
+
+        // 4. Lấy List Entity và ánh xạ sang DTO
+        List<Product> products = (List<Product>) rawPage.getItems();
+        List<ProductResponseDTO> dtoList = productMapper.toDTOList(products);
+
+        // 5. Trả về PageResponse đã ánh xạ
+        return PageResponse.<List<ProductResponseDTO>>builder()
+                .pageNo(rawPage.getPageNo())
+                .pageSize(rawPage.getPageSize())
+                .totalPage(rawPage.getTotalPage())
+                .items(dtoList)
+                .build();
+    }
+
+    // --- READ DETAIL (GET DETAIL) ---
+    @Override
+    public ProductResponseDTO getProductById(Long id) {
+        Product product = findProductOrThrow(id);
+        return productMapper.toDTO(product);
+    }
+
+    // --- UPDATE (PUT) ---
+    @Override
+    @Transactional
+    public ProductResponseDTO updateProduct(Long id, ProductUpdateRequestDTO requestDTO) {
+        Product existingProduct = findProductOrThrow(id);
+
+        // 🚨 LƯU Ý QUAN TRỌNG:
+        // Logic UPDATE sản phẩm có biến thể/thuộc tính là CỰC KỲ phức tạp
+        // (xử lý thêm/xóa/sửa biến thể, thêm/xóa/sửa Attribute).
+        // Ở đây, ta chỉ cập nhật các trường cơ bản.
+
+        if (requestDTO.getName() != null) existingProduct.setName(requestDTO.getName());
+        if (requestDTO.getDescription() != null) existingProduct.setDescription(requestDTO.getDescription());
+        if (requestDTO.getPrice() != null) existingProduct.setPrice(requestDTO.getPrice());
+        if (requestDTO.getStatus() != null) existingProduct.setStatus(requestDTO.getStatus());
+
+        // Cần thêm logic xử lý Cập nhật Biến thể và Danh mục ở đây! (Không thể tự động map)
+
+        Product updatedProduct = productRepository.save(existingProduct);
+        return productMapper.toDTO(updatedProduct);
+    }
+
+    // --- DELETE ---
+    @Override
+    @Transactional
+    public void deleteProduct(Long id) {
+        Product product = findProductOrThrow(id);
+        // Nhờ CascadeType.ALL, các biến thể và liên kết Category sẽ bị xóa.
+        productRepository.delete(product);
+    }
+    private Product findProductOrThrow(Long id) {
+        return productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
     }
 }
