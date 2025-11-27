@@ -1,11 +1,11 @@
 package com.eyecommer.Backend.service.impl;
 
-import com.eyecommer.Backend.dto.request.ProductRequestDTO;
-import com.eyecommer.Backend.dto.request.ProductUpdateRequestDTO;
-import com.eyecommer.Backend.dto.request.VariantProductRequestDTO;
+import com.eyecommer.Backend.dto.request.*;
 import com.eyecommer.Backend.dto.response.PageResponse;
 import com.eyecommer.Backend.dto.response.ProductResponseDTO;
 import com.eyecommer.Backend.mapper.ProductMapper;
+import com.eyecommer.Backend.mapper.VariantImageMapper;
+import com.eyecommer.Backend.mapper.VariantProductMapper;
 import com.eyecommer.Backend.model.*;
 import com.eyecommer.Backend.repository.*;
 import com.eyecommer.Backend.repository.critetia.GenericSearchQueryCriteriaConsumer;
@@ -36,6 +36,9 @@ public class ProductServiceImpl implements ProductService {
             "PROCESSING", // Đơn hàng đã được xác nhận. Đang đóng gói hoặc đã giao cho đơn vị vận chuyển nhưng chưa lấy.
             "SHIPPED" //Shipper đã lấy hàng (Đang trên đường giao). Xóa sản phẩm khiến hệ thống mất khả năng theo dõi, cập nhật trạng thái nhận hàng, hoặc xử lý trả hàng/hoàn tiền sau này.
     );
+    private final VariantImageMapper variantImageMapper;
+    private final VariantProductMapper variantProductMapper;
+
     @Override
     @Transactional
     public List<ProductResponseDTO> createProduct(List<ProductRequestDTO> requests) {
@@ -235,27 +238,6 @@ public class ProductServiceImpl implements ProductService {
         return productMapper.toDTO(product);
     }
 
-    // --- UPDATE (PUT) ---
-    @Override
-    @Transactional
-    public ProductResponseDTO updateProduct(Long id, ProductUpdateRequestDTO requestDTO) {
-        Product existingProduct = findProductOrThrow(id);
-
-        // 🚨 LƯU Ý QUAN TRỌNG:
-        // Logic UPDATE sản phẩm có biến thể/thuộc tính là CỰC KỲ phức tạp
-        // (xử lý thêm/xóa/sửa biến thể, thêm/xóa/sửa Attribute).
-        // Ở đây, ta chỉ cập nhật các trường cơ bản.
-
-        if (requestDTO.getName() != null) existingProduct.setName(requestDTO.getName());
-        if (requestDTO.getDescription() != null) existingProduct.setDescription(requestDTO.getDescription());
-        if (requestDTO.getPrice() != null) existingProduct.setPrice(requestDTO.getPrice());
-        if (requestDTO.getStatus() != null) existingProduct.setStatus(requestDTO.getStatus());
-
-        // Cần thêm logic xử lý Cập nhật Biến thể và Danh mục ở đây! (Không thể tự động map)
-
-        Product updatedProduct = productRepository.save(existingProduct);
-        return productMapper.toDTO(updatedProduct);
-    }
 
     // --- DELETE ---
     @Override
@@ -302,8 +284,216 @@ public class ProductServiceImpl implements ProductService {
         product.setStatus("INACTIVE");
         productRepository.save(product);
     }
+
     private Product findProductOrThrow(Long id) {
         return productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Product not found with id: " + id));
     }
+
+    private VariantProduct findVariantOrThrow(Product product, Long variantId) {
+        if (product.getVariants() == null) {
+            throw new RuntimeException("Sản phẩm không có biến thể nào được tải.");
+        }
+
+        return product.getVariants().stream()
+                .filter(v -> v.getId() != null && v.getId().equals(variantId))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy VariantProduct với ID: " + variantId + " trong sản phẩm này."));
+    }
+
+
+
+    @Override
+    @Transactional
+    public ProductResponseDTO updateProduct(Long id, ProductUpdateRequestDTO requestDTO) {
+        Product existingProduct = findProductOrThrow(id);
+
+        // 1. CẬP NHẬT THÔNG TIN CƠ BẢN (An toàn)
+        existingProduct.setName(requestDTO.getName());
+        existingProduct.setDescription(requestDTO.getDescription());
+        existingProduct.setPrice(requestDTO.getPrice());
+        existingProduct.setStatus(requestDTO.getStatus());
+        existingProduct.setThumbnailUrl(requestDTO.getThumbnailUrl()); // Cập nhật Product Thumbnail
+        existingProduct.setShortDescription(requestDTO.getShortDescription());
+
+        // 2. CẬP NHẬT DANH MỤC (N-M)
+        updateProductCategories(existingProduct, requestDTO.getCategoryIds());
+
+        // 3. CẬP NHẬT BIẾN THỂ (1-N)
+        updateProductVariants(existingProduct, requestDTO.getVariantProducts());
+
+        Product updatedProduct = productRepository.save(existingProduct);
+        return productMapper.toDTO(updatedProduct);
+    }
+    // ------------------- HÀM HỖ TRỢ NGHIỆP VỤ UPDATE -------------------
+
+    private void updateProductCategories(Product product, List<Long> newCategoryIds) {
+        // LƯU Ý QUAN TRỌNG: Dùng Collection gốc của Entity
+        Set<ProductCategory> existingPcs = product.getProductCategories();
+
+        // 1. Xóa các liên kết cũ (Hibernate sẽ theo dõi và xóa khỏi DB)
+        existingPcs.clear();
+
+        if (newCategoryIds != null && !newCategoryIds.isEmpty()) {
+
+            List<Category> categories = categoryRepository.findAllById(newCategoryIds);
+
+            if (categories.size() != newCategoryIds.size()) {
+                Set<Long> foundIds = categories.stream().map(Category::getId).collect(Collectors.toSet());
+                String missingIds = newCategoryIds.stream().filter(id -> !foundIds.contains(id)).map(String::valueOf).collect(Collectors.joining(", "));
+                throw new RuntimeException("Category ID không hợp lệ hoặc không tìm thấy: " + missingIds);
+            }
+
+            // 2. TẠO VÀ THÊM CÁC PHẦN TỬ MỚI VÀO COLLECTION GỐC
+            categories.stream()
+                    .map(category -> {
+                        ProductCategory pc = new ProductCategory();
+                        pc.setProduct(product);    // BẮT BUỘC: Gán mối quan hệ ngược lại
+                        pc.setCategory(category);
+                        pc.setIsDefault(false);
+                        return pc;
+                    })
+                    // THÊM TRỰC TIẾP VÀO COLLECTION GỐC SAU KHI CLEAR
+                    .forEach(existingPcs::add);
+
+        }
+    }
+
+    private void updateProductVariants(Product product, List<VariantProductUpdateDTO> updateDTOs) {
+
+        Set<Long> updatedVariantIds = updateDTOs.stream()
+                .filter(v -> v.getId() != null)
+                .map(VariantProductUpdateDTO::getId)
+                .collect(Collectors.toSet());
+        // 3.1. XỬ LÝ XÓA CÁC BIẾN THỂ CŨ
+        Set<VariantProduct> variantsToRemove = product.getVariants().stream()
+                .filter(v -> v.getId() != null && !updatedVariantIds.contains(v.getId()))
+                .collect(Collectors.toSet());
+        for (VariantProduct variant : variantsToRemove) {
+            // Lấy Set ID của SKU bị xóa
+            Set<Long> singleVariantId = Set.of(variant.getId());
+
+            // 1. KIỂM TRA ĐƠN HÀNG ĐANG HOẠT ĐỘNG (PENDING_STATUSES)
+            long activeOrderCount = orderRepository.countPendingOrderItemsByVariantIds(
+                    singleVariantId,
+                    PENDING_STATUSES // List.of("PENDING", "PROCESSING", "SHIPPED")
+            );
+
+            if (activeOrderCount > 0) {
+                // Nếu có đơn hàng đang xử lý, TUYỆT ĐỐI KHÔNG XÓA.
+                throw new RuntimeException("Không thể xóa SKU '" + variant.getSku() +
+                        "' vì có " + activeOrderCount + " đơn hàng đang trong quá trình xử lý.");
+            }
+            if (variant.getStock() != null && variant.getStock() > 0) {
+                throw new RuntimeException("Không thể xóa SKU '" + variant.getSku() + "' vì vẫn còn tồn kho (" + variant.getStock() + ").");
+            }
+            product.getVariants().remove(variant);
+        }
+
+        // 3.2. XỬ LÝ CÁC BIẾN THỂ MỚI HOẶC HIỆN TẠI (UPDATE/CREATE)
+        for (VariantProductUpdateDTO dto : updateDTOs) {
+            if (dto.getId() == null) {
+                // TẠO MỚI SKU
+                VariantProduct newVariant = variantProductMapper.toEntity(dto); // Giả định VPM có toEntity(UpdateDTO)
+                newVariant.setProduct(product);
+                product.getVariants().add(newVariant);
+
+                // Cần xử lý Attribute và Image cho SKU mới
+                updateVariantAttributes(newVariant, dto.getVariantAttributeIds());
+                updateVariantImages(newVariant, dto.getImages());
+
+            } else {
+                // CẬP NHẬT SKU HIỆN TẠI
+                VariantProduct existingVariant = findVariantOrThrow(product, dto.getId());
+
+                // RÀNG BUỘC SỬA SKU: Không được sửa Mã SKU nếu đã có lịch sử giao dịch
+                if (!existingVariant.getSku().equals(dto.getSku())) {
+                    if (orderRepository.hasOrderItemHistory(existingVariant.getId())) {
+                        throw new RuntimeException("Không thể sửa Mã SKU từ '" + existingVariant.getSku() +
+                                "' sang '" + dto.getSku() + "' vì SKU cũ đã có lịch sử giao dịch.");
+                    }
+                }
+
+                // Cập nhật các trường an toàn cơ bản
+                existingVariant.setSku(dto.getSku());
+                existingVariant.setPrice(dto.getPrice());
+                // Giả định: Nếu client gửi Stock, chỉ cho phép cập nhật khi Stock = 0 (trường hợp tạo mới/reset)
+                if (dto.getStock() != null && dto.getStock() != existingVariant.getStock()) {
+                    // Nếu muốn bắt buộc phải kiểm tra, bạn nên chuyển logic này sang API Nhập kho.
+                    // Nếu muốn giữ, bạn cần có logic kiểm tra quyền và log thay đổi.
+                    throw new RuntimeException("Không thể update số lượng tồn kho, vì stock chỉ được cập nhật qua Nhập/Xuất kho");
+                }
+                // Cập nhật các mối quan hệ 1-N (Attribute và Images)
+                updateVariantAttributes(existingVariant, dto.getVariantAttributeIds());
+                updateVariantImages(existingVariant, dto.getImages());
+            }
+        }
+    }
+
+    // --- HÀM 3: CẬP NHẬT ATTRIBUTE (THUỘC TÍNH) ---
+    private void updateVariantAttributes(VariantProduct variantProduct, List<Long> newAttributeIds) {
+
+        // 1. LẤY THAM CHIẾU ĐẾN SET GỐC
+        Set<VariantProductAttribute> existingAttributes = variantProduct.getAttributes();
+
+        // 2. Xóa liên kết cũ (Hibernate theo dõi và xóa)
+        // Nếu getAttributes() có thể là null, cần khởi tạo an toàn ở đây.
+        if (existingAttributes == null) {
+            existingAttributes = new HashSet<>();
+            variantProduct.setAttributes(existingAttributes); // Gán Set mới nếu nó là null
+        }
+        existingAttributes.clear();
+
+        if (newAttributeIds != null && !newAttributeIds.isEmpty()) {
+            List<Attribute> attributes = attributeRepository.findAllById(newAttributeIds);
+
+            // Kiểm tra tính toàn vẹn (Giữ nguyên)
+            if (attributes.size() != newAttributeIds.size()) {
+                Set<Long> foundIds = attributes.stream().map(Attribute::getId).collect(Collectors.toSet());
+                String missingIds = newAttributeIds.stream().filter(id -> !foundIds.contains(id)).map(String::valueOf).collect(Collectors.joining(", "));
+                throw new RuntimeException("Attribute ID không hợp lệ hoặc không tìm thấy: " + missingIds);
+            }
+
+            // 3. TẠO VÀ THÊM TRỰC TIẾP VÀO SET GỐC
+            attributes.stream()
+                    .map(attribute -> {
+                        VariantProductAttribute vpa = new VariantProductAttribute();
+                        vpa.setVariantProduct(variantProduct);
+                        vpa.setAttribute(attribute);
+                        return vpa;
+                    })
+                    .forEach(existingAttributes::add); // <-- THÊM VÀO SET GỐC!
+
+            // KHÔNG GỌI: variantProduct.setAttributes(newVariantAttributes);
+        }
+    }
+
+    // --- HÀM 4: CẬP NHẬT HÌNH ẢNH (IMAGES) ---
+    private void updateVariantImages(VariantProduct variantProduct, List<VariantImageUpdateDTO> imageDTOs) {
+
+        // 1. LẤY THAM CHIẾU ĐẾN SET GỐC
+        Set<VariantImage> existingImages = variantProduct.getImages();
+
+        // Khởi tạo an toàn
+        if (existingImages == null) {
+            existingImages = new HashSet<>();
+            variantProduct.setImages(existingImages);
+        }
+
+        // 2. Xóa toàn bộ Entity VariantImage cũ (Cascade sẽ xóa khỏi DB)
+        existingImages.clear();
+
+        if (imageDTOs != null && !imageDTOs.isEmpty()) {
+
+            // 3. TẠO VÀ THÊM TRỰC TIẾP VÀO SET GỐC
+            imageDTOs.stream()
+                    // Ánh xạ từng DTO sang Entity, thiết lập mối quan hệ ngược lại
+                    .map(imgDto -> variantImageMapper.toEntity(imgDto, variantProduct))
+                    .forEach(existingImages::add); // <-- THÊM VÀO SET GỐC!
+
+            // KHÔNG CẦN GỌI variantProduct.setImages(newImages);
+        }
+    }
+
+
 }

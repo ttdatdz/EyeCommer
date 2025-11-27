@@ -28,5 +28,6 @@ public class VariantProductUpdateDTO {
 
     // Danh sách hình ảnh. Cần @NotNull nếu bạn coi việc có hình ảnh là bắt buộc.
     @NotNull(message = "Danh sách hình ảnh biến thể không được thiếu.")
-    private List<VariantImageRequestDTO> images;
+    @Valid
+    private List<VariantImageUpdateDTO> images;
 }

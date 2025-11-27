@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @Entity
@@ -30,7 +31,7 @@ public class VariantProduct extends AbstractEntity<Long> {
     // SỬA: Thay thế @ManyToMany cũ bằng @OneToMany tới bảng trung gian mới
     // Một SKU (VariantProduct) được tạo thành từ Nhiều (N) Attribute Value.
     @OneToMany(mappedBy = "variantProduct", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<VariantProductAttribute> attributes; // Đổi tên để rõ nghĩa hơn
+    private Set<VariantProductAttribute> attributes = new HashSet<>();; // Đổi tên để rõ nghĩa hơn
 
     @OneToMany(mappedBy = "variantProduct")
     private Set<OrderItem> orderItems;

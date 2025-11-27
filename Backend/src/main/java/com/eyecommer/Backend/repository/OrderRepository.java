@@ -16,4 +16,8 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             @Param("variantIds") Set<Long> variantIds,
             @Param("pendingStatuses") List<String> pendingStatuses
     );
+
+    // Hàm này kiểm tra xem SKU đã từng được đặt hàng chưa, bất kể trạng thái nào (trừ khi bạn muốn loại trừ status).
+    @Query("SELECT CASE WHEN COUNT(oi) > 0 THEN TRUE ELSE FALSE END FROM OrderItem oi WHERE oi.variantProduct.id = :variantId")
+    boolean hasOrderItemHistory(@Param("variantId") Long variantId);
 }

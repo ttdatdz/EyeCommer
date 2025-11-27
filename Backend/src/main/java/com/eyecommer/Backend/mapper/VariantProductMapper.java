@@ -1,6 +1,7 @@
 package com.eyecommer.Backend.mapper;
 
 import com.eyecommer.Backend.dto.request.VariantProductRequestDTO;
+import com.eyecommer.Backend.dto.request.VariantProductUpdateDTO;
 import com.eyecommer.Backend.dto.response.AttributeResponseDTO;
 import com.eyecommer.Backend.dto.response.VariantImageResponseDTO;
 import com.eyecommer.Backend.dto.response.VariantProductResponseDTO;
@@ -42,7 +43,28 @@ public class VariantProductMapper {
         return variant;
     }
 
+    public VariantProduct toEntity(VariantProductUpdateDTO dto) {
+        if (dto == null) return null;
 
+        VariantProduct variant = new VariantProduct();
+
+        // --- Thuộc tính Variant ---
+        variant.setSku(dto.getSku());
+        variant.setPrice(dto.getPrice());
+        variant.setStock(dto.getStock());
+
+        // BỔ SUNG: Ánh xạ và gán VariantImage Entities
+        if (dto.getImages() != null && !dto.getImages().isEmpty()) {
+            Set<VariantImage> images = dto.getImages().stream()
+                    // Truyền VariantProduct vào hàm toEntity để thiết lập mối quan hệ ngược lại
+                    .map(imgDto -> variantImageMapper.toEntity(imgDto, variant))
+                    .collect(Collectors.toSet());
+
+            variant.setImages(images);
+        }
+
+        return variant;
+    }
     public VariantProductResponseDTO toDTO(VariantProduct entity) {
         if (entity == null) return null;
 

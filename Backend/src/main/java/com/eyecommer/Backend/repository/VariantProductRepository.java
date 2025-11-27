@@ -11,4 +11,5 @@ import java.util.List;
 public interface VariantProductRepository extends JpaRepository<VariantProduct, Long> {
 
     List<VariantProduct> findAllBySkuIn(Collection<String> skus);
+    List<VariantProduct> findAllByIdIn(Collection<String> skus);
 }
