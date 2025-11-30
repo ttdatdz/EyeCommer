@@ -90,20 +90,19 @@ public class VoucherServiceImpl implements VoucherService {
                 .build();
     }
 
+
+//    TH1 voucher chưa đến ngày bắt đầu thì cho update thoải mái, nhưng ngày bắt đầu phải bé hơn ngày kết thức.
+//    TH2 voucher đang trong khoảng ngày bắt đầu + ngày kết thúc, thì không cho update luôn.
+//    TH3 voucher đã qua khoảng ngày diễn ra, thì có thể cho update lại ngày bắt đầu + ngày kết thúc + số lượng để phát hành lại voucher, nhưng số lượng phải lớn hơn số lượng người đã lấy
     @Override
     @Transactional
     public VoucherResponseDTO updateVoucher(Long id, VoucherUpdateDTO updateDTO) {
         Voucher voucher = voucherRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Voucher không tồn tại với ID: " + id));
 
-        LocalDateTime now = LocalDateTime.now(); // Lấy thời gian hiện tại
+        LocalDateTime now = LocalDateTime.now();
 
-        // --- RÀNG BUỘC NGHIỆP VỤ CHO UPDATE ---
-
-        // 1. Kiểm tra xem đã đến ngày bắt đầu chưa
-        if (voucher.getStartDate() != null && voucher.getStartDate().isBefore(now)) { // ĐÃ FIX: dùng .isBefore(now)
-            throw new IllegalStateException("Không thể cập nhật voucher đã đến hoặc qua ngày bắt đầu.");
-        }
+        // --- RÀNG BUỘC CHUNG (Áp dụng cho mọi trường hợp) ---
 
         // 2. Kiểm tra Số lượng tối đa mới có thấp hơn Số lượng đã sử dụng chưa
         if (updateDTO.getMaxUsage() < voucher.getCurrentUsage()) {
@@ -114,34 +113,46 @@ public class VoucherServiceImpl implements VoucherService {
             ));
         }
 
-        // 3. Kiểm tra trùng mã code mới (nếu mã code cũ bị thay đổi)
-//        if (!voucher.getCode().equals(updateDTO.getCode()) && voucherRepository.existsByCode(updateDTO.getCode())) {
-//            throw new IllegalArgumentException("Mã voucher mới đã tồn tại: " + updateDTO.getCode());
-//        }
-        // ------------------------------------
+        // 3. Kiểm tra logic ngày (Ngày kết thúc phải sau ngày bắt đầu)
+        if (updateDTO.getEndDate().isBefore(updateDTO.getStartDate()) || updateDTO.getEndDate().isEqual(updateDTO.getStartDate())) {
+            throw new IllegalArgumentException("Ngày kết thúc phải sau ngày bắt đầu.");
+        }
+        // --------------------------------------------------
 
+        // --- LOGIC THEO 3 TRƯỜNG HỢP THỜI GIAN ---
+        boolean isBeforeStart = voucher.getStartDate().isAfter(now);
+        boolean isAfterEnd = voucher.getEndDate().isBefore(now);
+
+        if (!isBeforeStart && !isAfterEnd) {
+            throw new IllegalStateException("Voucher đang trong thời gian hiệu lực. Không thể cập nhật.");
+        }
+
+        // --- THỰC HIỆN CẬP NHẬT ---
         voucherMapper.toEntityFromUpdateDTO(updateDTO, voucher);
         return voucherMapper.toResponseDTO(voucherRepository.save(voucher));
     }
-
     @Override
     @Transactional
     public void deleteVoucher(Long id) {
+//  Chỉ cho xóa nếu voucher chưa có ai lấy.
+//  Chỉ cho xóa nếu voucher CHƯA BẮT ĐẦU HOẶC ĐÃ KẾT THÚC HOÀN TOÀN mà chưa có ai lấy
         Voucher voucher = voucherRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Voucher không tồn tại với ID: " + id));
 
-        LocalDateTime now = LocalDateTime.now(); // Lấy thời gian hiện tại
-
-        // --- RÀNG BUỘC NGHIỆP VỤ CHO DELETE ---
+        LocalDateTime now = LocalDateTime.now();
 
         // 1. Kiểm tra xem đã có người dùng nào lấy/sử dụng voucher chưa
         if (voucher.getCurrentUsage() > 0) {
             throw new IllegalStateException("Không thể xóa voucher đã có người dùng nhận/sử dụng.");
         }
 
-        // 2. Kiểm tra xem đã đến ngày bắt đầu chưa
-        if (voucher.getStartDate() != null && voucher.getStartDate().isBefore(now)) { // ĐÃ FIX: dùng .isBefore(now)
-            throw new IllegalStateException("Không thể xóa voucher đã đến hoặc qua ngày bắt đầu.");
+        // 2. NGHIỆP VỤ MỚI: Chỉ cho phép xóa nếu voucher CHƯA BẮT ĐẦU HOẶC ĐÃ KẾT THÚC HOÀN TOÀN
+        boolean isBeforeStart = voucher.getStartDate().isAfter(now);
+        boolean isAfterEnd = voucher.getEndDate().isBefore(now);
+
+        if (!isBeforeStart && !isAfterEnd) {
+            // Tức là voucher đang trong khoảng thời gian có hiệu lực (đang diễn ra)
+            throw new IllegalStateException("Không thể xóa voucher đang diễn ra.");
         }
         // ------------------------------------
 
