@@ -70,6 +70,7 @@ public class AppConfig {
                         .requestMatchers("/api/categories/**").hasAnyAuthority("admin", "staff")
                         .requestMatchers("/api/variants/**").hasAnyAuthority("admin", "staff")
                         .requestMatchers("/api/products/**").hasAnyAuthority("admin", "staff")
+                        .requestMatchers("/api/vouchers/**").hasAnyAuthority("admin", "staff")
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(manager -> manager.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
