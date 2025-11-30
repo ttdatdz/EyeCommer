@@ -6,9 +6,13 @@ import com.eyecommer.Backend.dto.response.PageResponse;
 import com.eyecommer.Backend.dto.response.VoucherResponseDTO;
 import com.eyecommer.Backend.mapper.VoucherMapper;
 import com.eyecommer.Backend.model.Attribute;
+import com.eyecommer.Backend.model.User;
 import com.eyecommer.Backend.model.Voucher;
+import com.eyecommer.Backend.model.VoucherUser;
 import com.eyecommer.Backend.repository.GenericSearchRepository;
+import com.eyecommer.Backend.repository.UserRepository;
 import com.eyecommer.Backend.repository.VoucherRepository;
+import com.eyecommer.Backend.repository.VoucherUserRepository;
 import com.eyecommer.Backend.repository.critetia.GenericSearchQueryCriteriaConsumer;
 import com.eyecommer.Backend.repository.critetia.SearchCriteria;
 import com.eyecommer.Backend.repository.critetia.SearchQueryCriteriaConsumer;
@@ -34,6 +38,8 @@ public class VoucherServiceImpl implements VoucherService {
     private final VoucherRepository voucherRepository;
     private final VoucherMapper voucherMapper;
     private final GenericSearchRepository genericSearchRepository;
+    private final VoucherUserRepository voucherUserRepository;
+    private final UserRepository userRepository;
 
 
     @Override
@@ -159,14 +165,60 @@ public class VoucherServiceImpl implements VoucherService {
         voucherRepository.delete(voucher);
     }
 
+    @Override
+    public List<VoucherResponseDTO> getVouchersForCustomer(Long userId) {
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // Lấy tất cả voucher đang còn hiệu lực
+        List<Voucher> vouchers = voucherRepository
+                .findAllByUserId(userId);
+
+        return voucherMapper.toDTOList(vouchers);
+    }
 
     @Override
-    public List<VoucherResponseDTO> getAvailableVouchersForCustomer() {
-        // Lấy tất cả các voucher đang có hiệu lực (startDate <= now <= endDate)
-        // TODO: Cần bổ sung logic kiểm tra số lượng tối đa (maxUsage) nếu có
-        return voucherRepository.findAllByStartDateBeforeAndEndDateAfter(new Date(), new Date())
-                .stream()
-                .map(voucherMapper::toResponseDTO)
-                .toList();
+    @Transactional
+    public VoucherResponseDTO claimVoucher(Long voucherId, Long userId) {
+        // 1. Lock voucher tránh race conditions
+        Voucher voucher = voucherRepository.lockVoucherById(voucherId);
+        if (voucher == null) {
+            throw new EntityNotFoundException("Voucher không tồn tại!");
+        }
+
+        // 2. Kiểm tra ngày
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(voucher.getStartDate())) {
+            throw new IllegalStateException("Chưa đến thời gian phát hành voucher.");
+        }
+        if ( now.isAfter(voucher.getEndDate())) {
+            throw new IllegalStateException("Voucher không còn hiệu lực.");
+        }
+        // 3. Kiểm tra user đã lấy voucher chưa
+        if (voucherUserRepository.existsByVoucherIdAndUserId(voucherId, userId)) {
+            throw new IllegalStateException("Bạn đã nhận voucher này rồi.");
+        }
+
+        // 4. Kiểm tra số lượng
+        if (voucher.getCurrentUsage() >= voucher.getMaxUsage()) {
+            throw new IllegalStateException("Voucher đã hết số lượng!");
+        }
+
+        // 5. Cập nhật số lượng
+        voucher.setCurrentUsage(voucher.getCurrentUsage() + 1);
+        voucherRepository.save(voucher);
+
+        // 6. Lưu lịch sử vào Voucher_User
+        User user = userRepository.findById(userId).orElseThrow(()->new EntityNotFoundException("User not found."));
+        VoucherUser voucherUser = new VoucherUser();
+        voucherUser.setVoucher(voucher);
+        voucherUser.setUser(user);
+        voucherUser.setStatus("CLAIMED");
+        voucherUser.setClaimDate(LocalDateTime.now()); // <-- set claim time
+        voucherUser.setUsedDate(null);
+
+        voucherUserRepository.save(voucherUser);
+
+        return voucherMapper.toResponseDTO(voucher);
     }
 }

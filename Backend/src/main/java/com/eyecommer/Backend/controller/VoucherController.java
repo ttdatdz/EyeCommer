@@ -112,24 +112,3 @@ public class VoucherController {
     }
 }
 
-//// Controller riêng cho luồng khách hàng
-//@RestController
-//@RequestMapping("/api/customer/vouchers")
-//class CustomerVoucherController {
-//
-//    @Autowired
-//    private VoucherService voucherService;
-//
-//    // READ (Get Available Vouchers for Customer)
-//    @GetMapping("/available")
-//    public ResponseData<?> getAvailableVouchers() {
-//        try {
-//            List<VoucherResponseDTO> response = voucherService.getAvailableVouchersForCustomer();
-//            return new ResponseData<>(HttpStatus.OK.value(), "Lấy danh sách Voucher khả dụng thành công", response);
-//        } catch (Exception e) {
-//            return new ResponseData<>(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Lấy danh sách Voucher khả dụng thất bại vì: " + e.getMessage());
-//        }
-//    }
-//
-//    // TODO: Bổ sung API cho nghiệp vụ Lấy voucher (phát hành theo mùa) và Áp dụng voucher
-//}
