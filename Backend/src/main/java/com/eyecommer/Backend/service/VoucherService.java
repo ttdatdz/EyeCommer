@@ -3,6 +3,7 @@ package com.eyecommer.Backend.service;
 import com.eyecommer.Backend.dto.request.VoucherRequestDTO;
 import com.eyecommer.Backend.dto.request.VoucherUpdateDTO;
 import com.eyecommer.Backend.dto.response.PageResponse;
+import com.eyecommer.Backend.dto.response.VoucherApplyResponse;
 import com.eyecommer.Backend.dto.response.VoucherResponseDTO;
 import com.eyecommer.Backend.model.VoucherUser;
 import org.springframework.data.domain.Page;
@@ -25,4 +26,6 @@ public interface VoucherService {
     VoucherResponseDTO claimVoucher (Long voucherId, Long userId);
 
     List<VoucherResponseDTO> getVouchersForCustomer(Long userId);
+
+    VoucherApplyResponse applyVoucher(Long voucherId, Double totalAmount);
 }

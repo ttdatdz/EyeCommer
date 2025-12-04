@@ -3,6 +3,7 @@ package com.eyecommer.Backend.service.impl;
 import com.eyecommer.Backend.dto.request.VoucherRequestDTO;
 import com.eyecommer.Backend.dto.request.VoucherUpdateDTO;
 import com.eyecommer.Backend.dto.response.PageResponse;
+import com.eyecommer.Backend.dto.response.VoucherApplyResponse;
 import com.eyecommer.Backend.dto.response.VoucherResponseDTO;
 import com.eyecommer.Backend.mapper.VoucherMapper;
 import com.eyecommer.Backend.model.Attribute;
@@ -220,5 +221,18 @@ public class VoucherServiceImpl implements VoucherService {
         voucherUserRepository.save(voucherUser);
 
         return voucherMapper.toResponseDTO(voucher);
+    }
+
+    @Override
+    public VoucherApplyResponse applyVoucher(Long voucherId, Double totalAmount) {
+        Voucher voucher = voucherRepository.findById(voucherId)
+                .orElseThrow(() -> new RuntimeException("Voucher not found"));
+
+        double discountAmount;
+            discountAmount = totalAmount * voucher.getDiscount() / 100;
+
+        double finalAmount = Math.max(totalAmount - discountAmount, 0);
+
+        return new VoucherApplyResponse(voucher.getCode(), discountAmount, finalAmount);
     }
 }

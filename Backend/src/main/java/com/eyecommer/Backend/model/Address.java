@@ -17,6 +17,12 @@ public class Address extends AbstractEntity<Long> {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @Column(name = "receiver_name")
+    private String receiverName;
+
+    @Column(name = "receiver_phone")
+    private String receiverPhone;
+
     @Column(name = "address_detail")
     private String addressDetail;
 
@@ -28,6 +34,9 @@ public class Address extends AbstractEntity<Long> {
 
     @Column(name = "postal_code")
     private String postalCode;
+
+    @Column(name = "is_default")
+    private Boolean isDefault;
 
     @OneToMany(mappedBy = "address")
     private Set<Order> orders;

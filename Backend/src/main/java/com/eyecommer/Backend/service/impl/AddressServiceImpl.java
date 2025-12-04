@@ -8,8 +8,10 @@ import com.eyecommer.Backend.model.User;
 import com.eyecommer.Backend.repository.AddressRepository;
 import com.eyecommer.Backend.repository.UserRepository;
 import com.eyecommer.Backend.service.AddressService;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -22,54 +24,71 @@ public class AddressServiceImpl implements AddressService {
     private final AddressMapper addressMapper;
 
     @Override
-    public AddressResponseDTO createAddress(Long userId, AddressRequestDTO dto) {
-
+    @Transactional
+    public AddressResponseDTO createAddress(Long userId, AddressRequestDTO request) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        Address address = addressMapper.toEntity(dto);
-        address.setUser(user);
-
+        // Nếu là default → clear default của user này
+        if (Boolean.TRUE.equals(request.getIsDefault())) {
+            addressRepository.clearDefaultForUser(user.getId());
+        }
+        Address address = addressMapper.toEntity(request, user);
         Address saved = addressRepository.save(address);
+
         return addressMapper.toDTO(saved);
     }
 
     @Override
-    public AddressResponseDTO updateAddress(Long addressId, AddressRequestDTO dto) {
-
+    @Transactional
+    public AddressResponseDTO updateAddress(Long addressId, Long userId, AddressRequestDTO request) {
         Address address = addressRepository.findById(addressId)
-                .orElseThrow(() -> new RuntimeException("Address not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Address not found"));
 
-        address.setAddressDetail(dto.getAddressDetail());
-        address.setCity(dto.getCity());
-        address.setDistrict(dto.getDistrict());
-        address.setPostalCode(dto.getPostalCode());
+        if (!address.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Bạn không có quyền sửa địa chỉ này");
+        }
 
+        // Nếu cập nhật thành default → xóa default các address khác
+        if (request.getIsDefault() != null && request.getIsDefault()) {
+            addressRepository.clearDefaultForUser(address.getUser().getId());
+        }
+
+        addressMapper.updateFromDto(request, address);
         Address saved = addressRepository.save(address);
+
         return addressMapper.toDTO(saved);
     }
 
     @Override
-    public void deleteAddress(Long addressId) {
+    @Transactional
+    public void deleteAddress(Long addressId, Long userId) {
         Address address = addressRepository.findById(addressId)
-                .orElseThrow(() -> new RuntimeException("Address not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Address not found"));
+
+        if (!address.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Bạn không có quyền xóa địa chỉ này");
+        }
 
         addressRepository.delete(address);
     }
 
     @Override
-    public AddressResponseDTO getAddressById(Long addressId) {
-        Address address = addressRepository.findById(addressId)
-                .orElseThrow(() -> new RuntimeException("Address not found"));
-
-        return addressMapper.toDTO(address);
+    @Transactional(readOnly = true)
+    public List<AddressResponseDTO> getAllByUser(Long userId) {
+        return addressMapper.toDTOList(addressRepository.findByUserId(userId));
     }
 
     @Override
-    public List<AddressResponseDTO> getAddressesByUser(Long userId) {
-        return addressRepository.findByUserId(userId)
-                .stream()
-                .map(addressMapper::toDTO)
-                .toList();
+    @Transactional(readOnly = true)
+    public AddressResponseDTO getById(Long id, Long userId) {
+        Address address = addressRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Address not found"));
+
+        if (!address.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Bạn không có quyền xem địa chỉ này");
+        }
+
+        return addressMapper.toDTO(address);
     }
 }

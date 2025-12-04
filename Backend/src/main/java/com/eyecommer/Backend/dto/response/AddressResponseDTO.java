@@ -1,14 +1,16 @@
 package com.eyecommer.Backend.dto.response;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter
-@Setter
+@Data
 public class AddressResponseDTO {
     private Long id;
+    private Long userId;
+    private String receiverName;
+    private String receiverPhone;
     private String addressDetail;
     private String city;
     private String district;
     private String postalCode;
+    private Boolean isDefault;
 }
