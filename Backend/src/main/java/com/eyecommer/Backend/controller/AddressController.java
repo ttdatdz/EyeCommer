@@ -2,12 +2,14 @@ package com.eyecommer.Backend.controller;
 
 import com.eyecommer.Backend.dto.request.AddressRequestDTO;
 import com.eyecommer.Backend.dto.response.AddressResponseDTO;
+import com.eyecommer.Backend.dto.response.PageResponse;
 import com.eyecommer.Backend.dto.response.ResponseData;
 import com.eyecommer.Backend.model.User;
 import com.eyecommer.Backend.repository.UserRepository;
 import com.eyecommer.Backend.service.AddressService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -39,17 +41,7 @@ public class AddressController {
         }
     }
 
-    @GetMapping
-    public ResponseData<?> getAllByUser(Principal principal) {
-        try {
-            Long userId = getUserID(principal);
-            List<AddressResponseDTO> list = addressService.getAllByUser(userId);
 
-            return new ResponseData<>(HttpStatus.OK.value(), "Lấy danh sách địa chỉ thành công", list);
-        } catch (Exception e) {
-            return new ResponseData<>(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Lấy danh sách thất bại vì: " + e.getMessage());
-        }
-    }
 
     @GetMapping("/{id}")
     public ResponseData<?> getById(@PathVariable Long id, Principal principal) {
@@ -88,6 +80,34 @@ public class AddressController {
             return new ResponseData<>(HttpStatus.NO_CONTENT.value(), "Xóa địa chỉ thành công");
         } catch (Exception e) {
             return new ResponseData<>(HttpStatus.BAD_REQUEST.value(), "Xóa địa chỉ thất bại vì: " + e.getMessage());
+        }
+    }
+
+
+    @GetMapping
+    @PreAuthorize("hasAuthority('user')")
+    public ResponseData<?> getCartByUser(
+            Principal principal,
+            @RequestParam(defaultValue = "0") int pageNo,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = "") String[] search
+    ) {
+        try {
+            Long userId = getUserID(principal);
+
+            PageResponse<?> pageResponse = addressService.getAllByUser(
+                    userId,
+                    pageNo,
+                    pageSize,
+                    sortBy,
+                    search
+            );
+
+            return new ResponseData<>(HttpStatus.OK.value(), "Lấy danh sách địa chỉ thành công", pageResponse);
+
+        } catch (Exception e) {
+            return new ResponseData<>(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Lấy danh sách thất bại vì: " + e.getMessage());
         }
     }
 }
