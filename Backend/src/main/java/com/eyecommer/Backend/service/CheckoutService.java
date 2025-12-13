@@ -4,5 +4,5 @@ import com.eyecommer.Backend.dto.request.CheckoutRequestDTO;
 import com.eyecommer.Backend.dto.response.CheckoutResponseDTO;
 
 public interface CheckoutService {
-    CheckoutResponseDTO checkout(CheckoutRequestDTO request);
+    CheckoutResponseDTO checkout(CheckoutRequestDTO request, String clientIp);
 }

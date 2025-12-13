@@ -32,17 +32,18 @@ public class JwtTokenFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         log.info("---------- doFilterInternal ----------");
+
         String path = request.getRequestURI();
         final String authorization = request.getHeader(AUTHORIZATION);
 
-        if (path.startsWith("/api/auth/")) {
-            log.info("----------ignore doFilterInternal ----------");
+        if (path.startsWith("/api/auth/") || path.startsWith("/api/vnpay/")){
+            log.info("----------Khong can token ----------");
             filterChain.doFilter(request, response);
             return;
         }
         if (StringUtils.isBlank(authorization) || !authorization.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
-            log.info("----------Thiếu token.Nên bỏ qua----------");
+            log.info("----------Thieu token.Nen bo qua----------");
             return;
         }
         final String token = authorization.substring("Bearer ".length());

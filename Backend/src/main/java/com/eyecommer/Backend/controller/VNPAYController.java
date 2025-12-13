@@ -1,11 +1,11 @@
 package com.eyecommer.Backend.controller;
 
-import com.eyecommer.Backend.model.OrderSnapshot;
-import com.eyecommer.Backend.repository.OrderSnapshotRepository;
+import com.eyecommer.Backend.service.PaymentService;
 import com.eyecommer.Backend.service.VNPAYService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -13,50 +13,57 @@ import java.io.IOException;
 import java.util.Map;
 
 @RestController
+@RequestMapping("/api/vnpay")
 @RequiredArgsConstructor
 public class VNPAYController {
 
     private final VNPAYService vnpayService;
-    private final OrderSnapshotRepository orderSnapshotRepository;
+    private final PaymentService paymentService;
 
-    // Frontend URL redirect sau khi thanh toán
-    private final String FRONTEND_SUCCESS_URL = "http://localhost:3000/payment-success";
-    private final String FRONTEND_FAIL_URL = "http://localhost:3000/payment-fail";
+//    private static final String FRONTEND_SUCCESS_URL =
+//            "http://localhost:3000/payment-success";
 
-    @GetMapping("/vnpay/return")
-    public void vnpayReturn(@RequestParam Map<String, String> params, HttpServletResponse response) throws IOException {
-        // 1️⃣ Verify callback
+    private static final String FRONTEND_SUCCESS_URL =
+            "https://english-vocabulary-system.vercel.app/VnpayResult";
+    private static final String FRONTEND_FAIL_URL =
+            "http://localhost:3000/payment-fail";
+
+    @GetMapping("/return")
+    public void vnpayReturn(
+            @RequestParam Map<String, String> params,
+            HttpServletResponse response
+    ) throws IOException {
+
+        // 1️⃣ Verify signature
         boolean isValid = vnpayService.verifyCallback(params);
 
-        // 2️⃣ Lấy orderCode từ params
         String orderCode = params.get("vnp_TxnRef");
-
-        OrderSnapshot snapshot = orderSnapshotRepository.findByOrderCode(orderCode)
-                .orElse(null);
-
-        if (snapshot == null) {
-            // Không tìm thấy order
-            response.sendRedirect(FRONTEND_FAIL_URL + "?message=Order not found");
-            return;
-        }
+        String responseCode = params.get("vnp_ResponseCode"); // "00" = success
 
         if (!isValid) {
-            snapshot.setPaymentStatus("FAILED");
-            orderSnapshotRepository.save(snapshot);
-            response.sendRedirect(FRONTEND_FAIL_URL + "?message=Invalid signature");
+            paymentService.handlePaymentFail(orderCode);
+            response.sendRedirect(
+                    FRONTEND_FAIL_URL + "?message=Invalid signature"
+            );
             return;
         }
 
-        // 3️⃣ Kiểm tra response code từ VNPAY
-        String vnpResponseCode = params.get("vnp_ResponseCode"); // 00 = success
-        if ("00".equals(vnpResponseCode)) {
-            snapshot.setPaymentStatus("PAID");
-            orderSnapshotRepository.save(snapshot);
-            response.sendRedirect(FRONTEND_SUCCESS_URL + "?orderCode=" + snapshot.getOrderCode());
+        // 2️⃣ Xử lý kết quả thanh toán
+        if ("00".equals(responseCode)) {
+
+            paymentService.handlePaymentSuccess(orderCode);
+
+            response.sendRedirect(
+                    FRONTEND_SUCCESS_URL + "?orderCode=" + orderCode
+            );
+
         } else {
-            snapshot.setPaymentStatus("FAILED");
-            orderSnapshotRepository.save(snapshot);
-            response.sendRedirect(FRONTEND_FAIL_URL + "?orderCode=" + snapshot.getOrderCode());
+
+            paymentService.handlePaymentFail(orderCode);
+
+            response.sendRedirect(
+                    FRONTEND_FAIL_URL + "?orderCode=" + orderCode
+            );
         }
     }
 }

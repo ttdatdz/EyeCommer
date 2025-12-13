@@ -3,6 +3,7 @@ package com.eyecommer.Backend.service.impl;
 import com.eyecommer.Backend.model.OrderSnapshot;
 import com.eyecommer.Backend.service.VNPAYService;
 import com.eyecommer.Backend.utils.VNPayUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -32,7 +33,7 @@ public class VNPAYServiceImpl implements VNPAYService {
     private String vnp_ReturnUrl;
 
     @Override
-    public String createPayment(OrderSnapshot snapshot) {
+    public String createPayment(OrderSnapshot snapshot, String clientIp) {
         try {
             Map<String, String> vnpParams = new HashMap<>();
 
@@ -46,6 +47,7 @@ public class VNPAYServiceImpl implements VNPAYService {
             vnpParams.put("vnp_OrderType", "other");
             vnpParams.put("vnp_Locale", "vn");
             vnpParams.put("vnp_ReturnUrl", vnp_ReturnUrl);
+            vnpParams.put("vnp_IpAddr", clientIp);
 
             ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
@@ -76,5 +78,30 @@ public class VNPAYServiceImpl implements VNPAYService {
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException("Error verifying VNPAY callback", e);
         }
+    }
+
+    @Override
+    public String getClientIp(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_CLIENT_IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        // Nếu có nhiều IP (trường hợp dùng proxy), lấy IP đầu tiên
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+        return ip;
     }
 }

@@ -35,7 +35,10 @@ public class AppConfig {
 
     private final UserService userService;
     private final JwtTokenFilter jwtTokenFilter;
-    private String[] WHITE_LIST = {"/api/auth/**"};
+    private static final String[] WHITE_LIST = {
+            "/api/auth/**",
+            "/api/vnpay/**"
+    };
     //Cấu hình cors
     @Bean
     public FilterRegistrationBean<CorsFilter> corsFilterRegistration() {

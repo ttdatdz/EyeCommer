@@ -24,6 +24,10 @@ public class VariantProduct extends AbstractEntity<Long> {
     @Column(name = "stock") // Tồn kho của biến thể này
     private Integer stock;
 
+    @Column(name = "reserved_stock", nullable = false)
+    private Integer reservedStock = 0;  // hàng đang bị giữ, =>available = stock - reservedStock
+
+
     // Ảnh của Biến thể
     @OneToMany(mappedBy = "variantProduct", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<VariantImage> images;
