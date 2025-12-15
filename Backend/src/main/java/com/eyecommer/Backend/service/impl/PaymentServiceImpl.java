@@ -74,7 +74,7 @@ public class PaymentServiceImpl implements PaymentService {
             }
         }
 
-        snapshot.setPaymentStatus(PaymentStatus.PAID.name());
+        snapshot.setPaymentStatus(PaymentStatus.PAID);
         orderSnapshotRepository.save(snapshot);
     }
 
@@ -101,6 +101,6 @@ public class PaymentServiceImpl implements PaymentService {
             );
         }
 
-        snapshot.setPaymentStatus(PaymentStatus.FAILED.name());
+        snapshot.setPaymentStatus(PaymentStatus.FAILED);
     }
 }

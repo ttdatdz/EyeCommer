@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 public interface OrderRepository extends JpaRepository<Order, Long> {
@@ -20,4 +21,9 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     // Hàm này kiểm tra xem SKU đã từng được đặt hàng chưa, bất kể trạng thái nào (trừ khi bạn muốn loại trừ status).
     @Query("SELECT CASE WHEN COUNT(oi) > 0 THEN TRUE ELSE FALSE END FROM OrderItem oi WHERE oi.variantProduct.id = :variantId")
     boolean hasOrderItemHistory(@Param("variantId") Long variantId);
+
+
+    Optional<Order> findByOrderCode(String orderCode);
+
+    List<Order> findByUserId(Long userId);
 }

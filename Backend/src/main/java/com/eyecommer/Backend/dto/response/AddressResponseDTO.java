@@ -13,4 +13,8 @@ public class AddressResponseDTO {
     private String district;
     private String postalCode;
     private Boolean isDefault;
+
+    private String ward;
+    private Integer districtId;
+    private String wardCode;
 }

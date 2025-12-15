@@ -1,10 +1,16 @@
 package com.eyecommer.Backend.service.impl;
 
+import com.eyecommer.Backend.dto.request.CancelOrderRequestDTO;
+import com.eyecommer.Backend.dto.request.ConfirmOrderRequestDTO;
+import com.eyecommer.Backend.dto.response.OrderDetailResponseDTO;
+import com.eyecommer.Backend.dto.response.OrderSummaryResponseDTO;
+import com.eyecommer.Backend.mapper.OrderMapper;
 import com.eyecommer.Backend.model.*;
 import com.eyecommer.Backend.repository.AddressRepository;
 import com.eyecommer.Backend.repository.OrderRepository;
 import com.eyecommer.Backend.repository.OrderSnapshotRepository;
 import com.eyecommer.Backend.repository.VariantProductRepository;
+import com.eyecommer.Backend.service.GHNService;
 import com.eyecommer.Backend.service.OrderService;
 import com.eyecommer.Backend.utils.OrderStatus;
 import com.eyecommer.Backend.utils.PaymentStatus;
@@ -13,93 +19,70 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
-    private final OrderSnapshotRepository orderSnapshotRepository;
-    private final VariantProductRepository variantProductRepository;
+
     private final OrderRepository orderRepository;
-    private final com.eyecommer.Backend.repository.orderItemRepository orderItemRepository;
-    private final AddressRepository addressRepository;
+    private final OrderMapper orderMapper;
+    private final GHNService ghnService;
 
     @Override
-    @Transactional
-    public Order confirmOrder(String orderCode) {
-        OrderSnapshot snapshot = orderSnapshotRepository
-                .findByOrderCode(orderCode)
-                .orElseThrow(() -> new RuntimeException("Snapshot not found"));
-
-        if (!PaymentStatus.UNPAID.name().equals(snapshot.getPaymentStatus())) {
-            throw new RuntimeException("Payment status invalid");
-        }
-
-        Address address = addressRepository.findById(snapshot.getAddressId())
-                .orElseThrow(() -> new RuntimeException("Address not found"));
-
-        // 1️⃣ TẠO ORDER
-        Order order = new Order();
-
-        order.setUser(snapshot.getUser());
-        order.setAddress(address);
-        order.setPaymentStatus(PaymentStatus.UNPAID.name());
-        order.setStatus(OrderStatus.CONFIRMED.name());
-        order.setTotalAmount(snapshot.getFinalAmount());
-
-        orderRepository.save(order);
-
-        // 2️⃣ TẠO ORDER ITEM + TRỪ KHO
-        for (OrderItemSnapshot snapItem : snapshot.getItems()) {
-
-            VariantProduct variant = variantProductRepository
-                    .findByIdForUpdate(snapItem.getVariantId())
-                    .orElseThrow();
-
-            // Trừ kho thật
-            variant.setStock(variant.getStock() - snapItem.getQuantity());
-            variant.setReservedStock(
-                    variant.getReservedStock() - snapItem.getQuantity()
-            );
-
-            OrderItem orderItem = new OrderItem();
-            orderItem.setOrder(order);
-            orderItem.setVariantProduct(variant);
-            orderItem.setPrice(snapItem.getPriceAtPurchase());
-            orderItem.setQuantity(snapItem.getQuantity());
-
-            orderItemRepository.save(orderItem);
-        }
-
-        // 3️⃣ ĐÁNH DẤU SNAPSHOT ĐÃ DÙNG
-//        snapshot.setSnapshotStatus(SnapshotStatus.CONVERTED.name());
-        orderSnapshotRepository.save(snapshot);
-
-        return order;
+    public OrderDetailResponseDTO getOrderDetail(String orderCode) {
+        Order order = orderRepository.findByOrderCode(orderCode)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+        return orderMapper.toDetailDTO(order);
     }
 
     @Override
-    @Transactional
-    public void cancelOrder(String orderCode) {
+    public List<OrderSummaryResponseDTO> getMyOrders(Long userId) {
+        return orderRepository.findByUserId(userId)
+                .stream()
+                .map(orderMapper::toSummaryDTO)
+                .toList();
+    }
 
-        OrderSnapshot snapshot = orderSnapshotRepository
-                .findByOrderCode(orderCode)
-                .orElseThrow();
+    @Override
+    public List<OrderSummaryResponseDTO> getAllOrders() {
+        return orderRepository.findAll()
+                .stream()
+                .map(orderMapper::toSummaryDTO)
+                .toList();
+    }
 
-        if (!PaymentStatus.UNPAID.name().equals(snapshot.getPaymentStatus())) {
-            return;
+    @Override
+    public void confirmOrder(ConfirmOrderRequestDTO request) {
+        Order order = orderRepository.findByOrderCode(request.getOrderCode())
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new RuntimeException("Order cannot be confirmed");
         }
 
-        for (OrderItemSnapshot item : snapshot.getItems()) {
+        // 1️⃣ Gọi GHN tạo shipment
+        ghnService.createShipment(order, request);
 
-            VariantProduct variant = variantProductRepository
-                    .findByIdForUpdate(item.getVariantId())
-                    .orElseThrow();
+        // 2️⃣ Update order
+        order.setStatus(OrderStatus.CONFIRMED);
+        order.setConfirmedAt(LocalDateTime.now());
+    }
 
-            variant.setReservedStock(
-                    variant.getReservedStock() - item.getQuantity()
-            );
+    @Override
+    public void cancelOrder(CancelOrderRequestDTO request) {
+        Order order = orderRepository.findByOrderCode(request.getOrderCode())
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        if (order.getStatus() == OrderStatus.DELIVERED) {
+            throw new RuntimeException("Delivered order cannot be cancelled");
         }
 
-        snapshot.setPaymentStatus(PaymentStatus.FAILED.name());
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setCanceledAt(LocalDateTime.now());
+
+        // (Optional) refund logic nếu cần
     }
 
 }

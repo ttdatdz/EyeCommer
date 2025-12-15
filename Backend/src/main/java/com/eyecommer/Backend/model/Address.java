@@ -13,9 +13,7 @@ import java.util.Set;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Address extends AbstractEntity<Long> {
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+
 
     @Column(name = "receiver_name")
     private String receiverName;
@@ -32,12 +30,26 @@ public class Address extends AbstractEntity<Long> {
     @Column(name = "district")
     private String district;
 
+    @Column(name = "ward")
+    private String ward;
+
     @Column(name = "postal_code")
     private String postalCode;
 
     @Column(name = "is_default")
     private Boolean isDefault;
 
+    // ===== GHN fields (BẮT BUỘC) =====
+    @Column(name = "district_id", nullable = false)
+    private Integer districtId;
+
+    @Column(name = "ward_code", nullable = false)
+    private String wardCode;
+
     @OneToMany(mappedBy = "address")
     private Set<Order> orders;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
 }

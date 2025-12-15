@@ -1,5 +1,8 @@
 package com.eyecommer.Backend.model;
 
+import com.eyecommer.Backend.utils.PaymentStatus;
+import com.eyecommer.Backend.utils.SnapshotCancelReason;
+import com.eyecommer.Backend.utils.SnapshotStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,9 +31,18 @@ public class OrderSnapshot extends AbstractEntity<Long> {
 
     @Column(name = "payment_method")
     private String paymentMethod; // COD / VNPAY
-
+    @Enumerated(EnumType.STRING)
     @Column(name = "payment_status")
-    private String paymentStatus; // PENDING / PAID / UNPAID
+    private PaymentStatus paymentStatus; // PENDING / PAID / UNPAID
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private SnapshotStatus status;
+
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancel_reason")
+    private SnapshotCancelReason cancelReason;
 
     @Column(name = "total_amount")
     private Double totalAmount;

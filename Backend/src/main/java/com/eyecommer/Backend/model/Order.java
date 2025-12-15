@@ -1,9 +1,12 @@
 package com.eyecommer.Backend.model;
 
+import com.eyecommer.Backend.utils.OrderStatus;
+import com.eyecommer.Backend.utils.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Entity
@@ -11,31 +14,44 @@ import java.util.Set;
 @Getter
 @Setter
 public class Order extends AbstractEntity<Long> {
-    @ManyToOne
-    @JoinColumn(name = "user_id")
+
+@Column(name = "order_code", unique = true, nullable = false)
+private String orderCode;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne
-    @JoinColumn(name = "address_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "address_id", nullable = false)
     private Address address;
 
-    @Column(name = "status")
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private OrderStatus status;
 
-    @Column(name = "total_amount")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false)
+    private PaymentStatus paymentStatus;
+
+    @Column(name = "total_amount", nullable = false)
     private Double totalAmount;
 
-    @Column(name = "payment_status")
-    private String paymentStatus;
+    // ====== Lifecycle ======
+    private LocalDateTime confirmedAt;
+    private LocalDateTime canceledAt;
+    private LocalDateTime deliveredAt;
 
-    @OneToMany(mappedBy = "order")
+    // ====== Relations ======
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<OrderItem> orderItems;
 
-    @OneToMany(mappedBy = "order")
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     private Set<Payment> payments;
 
-    @OneToMany(mappedBy = "order")
-    private Set<Shipments> shipments;
+    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Shipments shipments;
+
 
     @OneToMany(mappedBy = "usedOrder")
     private Set<VoucherUser> usedVouchers;

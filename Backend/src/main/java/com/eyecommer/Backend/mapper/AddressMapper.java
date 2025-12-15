@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 @Component
 public class AddressMapper {
 
-    // Tạo Address mới
     public Address toEntity(AddressRequestDTO req, User user) {
         Address a = new Address();
         a.setUser(user);
@@ -21,21 +20,29 @@ public class AddressMapper {
         a.setAddressDetail(req.getAddressDetail());
         a.setCity(req.getCity());
         a.setDistrict(req.getDistrict());
+        a.setWard(req.getWard());
         a.setPostalCode(req.getPostalCode());
         a.setIsDefault(req.getIsDefault());
+
+        // GHN fields
+        a.setDistrictId(req.getDistrictId());
+        a.setWardCode(req.getWardCode());
+
         return a;
     }
 
-    // Update Address (KHÔNG được đổi user)
     public void updateFromDto(AddressRequestDTO req, Address a) {
-
         if (req.getReceiverName() != null) a.setReceiverName(req.getReceiverName());
         if (req.getReceiverPhone() != null) a.setReceiverPhone(req.getReceiverPhone());
         if (req.getAddressDetail() != null) a.setAddressDetail(req.getAddressDetail());
         if (req.getCity() != null) a.setCity(req.getCity());
         if (req.getDistrict() != null) a.setDistrict(req.getDistrict());
+        if (req.getWard() != null) a.setWard(req.getWard());
         if (req.getPostalCode() != null) a.setPostalCode(req.getPostalCode());
         if (req.getIsDefault() != null) a.setIsDefault(req.getIsDefault());
+
+        if (req.getDistrictId() != null) a.setDistrictId(req.getDistrictId());
+        if (req.getWardCode() != null) a.setWardCode(req.getWardCode());
     }
 
     // Convert sang DTO
@@ -50,6 +57,9 @@ public class AddressMapper {
         dto.setDistrict(a.getDistrict());
         dto.setPostalCode(a.getPostalCode());
         dto.setIsDefault(a.getIsDefault());
+        dto.setWard(a.getWard());
+        dto.setDistrictId(a.getDistrictId());
+        dto.setWardCode(a.getWardCode());
         return dto;
     }
 

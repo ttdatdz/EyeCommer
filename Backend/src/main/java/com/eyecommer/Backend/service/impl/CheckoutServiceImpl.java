@@ -74,7 +74,7 @@ public class CheckoutServiceImpl implements CheckoutService {
         snapshot.setAddressId(address.getId());
         snapshot.setAddressDetail(address.getAddressDetail());
         snapshot.setPaymentMethod(request.getPaymentMethod());
-        snapshot.setPaymentStatus(PaymentStatus.UNPAID.name());
+        snapshot.setPaymentStatus(PaymentStatus.UNPAID);
 
         double totalAmount = 0;
 

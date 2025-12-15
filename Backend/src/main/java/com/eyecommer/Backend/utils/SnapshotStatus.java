@@ -1,7 +1,7 @@
 package com.eyecommer.Backend.utils;
 
 public enum SnapshotStatus {
-    CREATED,
+    PENDING,
     CONVERTED,
     CANCELLED
 }

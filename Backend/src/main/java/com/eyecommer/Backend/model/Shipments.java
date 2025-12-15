@@ -4,26 +4,40 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "Shipments")
 @Getter
 @Setter
 public class Shipments extends AbstractEntity<Long> {
-    @ManyToOne
-    @JoinColumn(name = "order_id")
+    @OneToOne
+    @JoinColumn(name = "order_id", nullable = false, unique = true)
     private Order order;
 
-    @Column(name = "status")
+
+    @Column(name = "carrier", nullable = false)
+    private String carrier;
+
+
+    @Column(name = "shipment_code", nullable = false, unique = true)
+    private String shipmentCode;
+
+
+    @Column(name = "status", nullable = false)
     private String status;
 
-    @Column(name = "tracking_number")
-    private String trackingNumber;
+
+    @Column(name = "shipping_fee")
+    private Long shippingFee;
 
     @Column(name = "ship_date")
-    private Date shipDate;
+    private LocalDateTime shipDate;
 
     @Column(name = "delivery_date")
-    private Date deliveryDate;
+    private LocalDateTime deliveryDate;
+
+    @Column(name = "expected_delivery_time")
+    private LocalDateTime expectedDeliveryTime;
+
 }
