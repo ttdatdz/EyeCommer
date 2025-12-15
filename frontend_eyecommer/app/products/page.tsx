@@ -6,28 +6,41 @@ import { useSearchParams } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
-import { getProducts, getProductsByCategory } from "@/lib/store"
-import type { Product } from "@/lib/types"
+import { getProducts, type ProductResponse } from "@/lib/services/product"
 
 function ProductsContent() {
   const searchParams = useSearchParams()
   const category = searchParams.get("category")
-  const [products, setProducts] = useState<Product[]>([])
+  const [products, setProducts] = useState<ProductResponse[]>([])
   const [sortBy, setSortBy] = useState("featured")
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
 
   useEffect(() => {
-    let result = category ? getProductsByCategory(category) : getProducts()
+    async function fetchProducts() {
+      setLoading(true)
+      setError("")
+      try {
+        // TODO: Add category filter when backend supports it
+        const response = await getProducts({ pageNo: 0, pageSize: 100 })
+        let items = response.data.items
 
-    // Sort
-    if (sortBy === "price-low") {
-      result = result.sort((a, b) => a.price - b.price)
-    } else if (sortBy === "price-high") {
-      result = result.sort((a, b) => b.price - a.price)
-    } else if (sortBy === "rating") {
-      result = result.sort((a, b) => b.rating - a.rating)
+        // Client-side sort
+        if (sortBy === "price-low") {
+          items = [...items].sort((a, b) => a.price - b.price)
+        } else if (sortBy === "price-high") {
+          items = [...items].sort((a, b) => b.price - a.price)
+        }
+
+        setProducts(items)
+      } catch (err: any) {
+        setError(err?.message || "Failed to load products")
+      } finally {
+        setLoading(false)
+      }
     }
 
-    setProducts(result)
+    fetchProducts()
   }, [category, sortBy])
 
   return (
@@ -50,9 +63,11 @@ function ProductsContent() {
               <option value="featured">Featured</option>
               <option value="price-low">Price: Low to High</option>
               <option value="price-high">Price: High to Low</option>
-              <option value="rating">Highest Rated</option>
             </select>
           </div>
+
+          {loading && <div className="text-center py-10">Loading products...</div>}
+          {error && <div className="text-center py-10 text-red-600">{error}</div>}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {products.map((product) => (
@@ -61,25 +76,20 @@ function ProductsContent() {
                   <CardContent className="p-4">
                     <div className="aspect-square bg-muted rounded mb-4 overflow-hidden">
                       <img
-                        src={product.image || "/placeholder.svg"}
+                        src={product.thumbnailUrl || "/placeholder.svg"}
                         alt={product.name}
                         className="w-full h-full object-cover hover:scale-105 transition-transform"
                       />
                     </div>
                     <h3 className="font-semibold mb-2 line-clamp-2">{product.name}</h3>
                     <div className="flex items-baseline gap-2 mb-3">
-                      <span className="text-lg font-bold text-accent">${product.price.toFixed(2)}</span>
-                      {product.originalPrice && (
-                        <span className="text-sm text-muted-foreground line-through">
-                          ${product.originalPrice.toFixed(2)}
-                        </span>
-                      )}
+                      <span className="text-lg font-bold text-accent">
+                        {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.price)}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-1 text-sm">
-                      <span className="text-yellow-500">★</span>
-                      <span className="font-semibold">{product.rating}</span>
-                      <span className="text-muted-foreground">({product.reviews})</span>
-                    </div>
+                    {product.shortDescription && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">{product.shortDescription}</p>
+                    )}
                   </CardContent>
                 </Card>
               </Link>

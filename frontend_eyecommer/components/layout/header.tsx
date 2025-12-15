@@ -62,9 +62,14 @@ export default function Header() {
               <Button variant="outline">{user.name}</Button>
             </Link>
           ) : (
-            <Link href="/login">
-              <Button variant="outline">Login</Button>
-            </Link>
+            <div className="flex gap-2">
+              <Link href="/register">
+                <Button variant="ghost">Register</Button>
+              </Link>
+              <Link href="/login">
+                <Button variant="outline">Login</Button>
+              </Link>
+            </div>
           )}
         </div>
       </div>
