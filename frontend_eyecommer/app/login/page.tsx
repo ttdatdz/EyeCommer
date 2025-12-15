@@ -1,125 +1,93 @@
 "use client"
 
 import type React from "react"
+
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { useAuth } from "../context/auth-context"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import Header from "@/components/layout/header"
+import Footer from "@/components/layout/footer"
+import { login } from "@/lib/auth-store"
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("")
+  const router = useRouter()
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const { login } = useAuth()
-  const router = useRouter()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    setError("")
-    setIsLoading(true)
+    const user = login(email, password)
 
-    try {
-      await login(username, password)
-
-      // Redirect based on role
-      const userRecord = { admin: "admin", staff: "staff", customer: "customer" }
-      const role = Object.entries({ admin: "admin", staff: "staff", customer: "customer" }).find(
-        ([key]) => key === username,
-      )?.[1]
-
-      if (username === "admin") {
-        router.push("/admin")
-      } else if (username === "staff") {
-        router.push("/staff")
-      } else if (username === "customer") {
-        router.push("/customer")
+    if (user) {
+      if (user.role === "admin") {
+        router.push("/admin/dashboard")
+      } else if (user.role === "staff") {
+        router.push("/staff/dashboard")
+      } else {
+        router.push("/customer/dashboard")
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Đã xảy ra lỗi")
-      setIsLoading(false)
+    } else {
+      setError("Invalid email or password")
     }
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
-        <div className="bg-card border border-border rounded-lg p-8">
-          {/* Header */}
-          <div className="mb-8">
-            <Link
-              href="/"
-              className="font-serif text-2xl font-light tracking-wide text-foreground hover:text-accent transition-colors"
-            >
-              OPTICA
-            </Link>
-            <h1 className="text-2xl font-serif font-light text-foreground mt-4">Đăng Nhập</h1>
-            <p className="text-sm text-muted-foreground mt-2">Nhập thông tin đăng nhập của bạn để tiếp tục</p>
-          </div>
+    <div className="min-h-screen flex flex-col bg-background">
+      <Header />
 
-          {/* Demo Credentials */}
-          <div className="bg-muted p-4 rounded-md mb-6 text-xs text-muted-foreground">
-            <p className="font-semibold mb-2">Tài khoản Demo:</p>
-            <p>Admin: admin / 123456</p>
-            <p>Staff: staff / 123456</p>
-            <p>Customer: customer / 123456</p>
-          </div>
+      <main className="flex-1 flex items-center justify-center py-16">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-8">
+            <h1 className="text-2xl font-bold mb-2">Sign In</h1>
+            <p className="text-muted-foreground mb-6">Welcome back to VisionHub</p>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <div className="p-3 bg-destructive/10 border border-destructive/30 rounded text-sm text-destructive">
-                {error}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold mb-2">Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className="w-full px-4 py-2 border border-border rounded bg-card text-foreground"
+                  required
+                />
               </div>
-            )}
 
-            {/* Username */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Tên Đăng Nhập</label>
-              <input
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin, staff hoặc customer"
-                className="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition"
-                disabled={isLoading}
-              />
+              <div>
+                <label className="block text-sm font-semibold mb-2">Password</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full px-4 py-2 border border-border rounded bg-card text-foreground"
+                  required
+                />
+              </div>
+
+              {error && <div className="p-3 bg-red-100 text-red-800 rounded text-sm">{error}</div>}
+
+              <Button type="submit" className="w-full">
+                Sign In
+              </Button>
+            </form>
+
+            <div className="mt-6 pt-6 border-t border-border">
+              <p className="text-xs text-muted-foreground mb-3">Demo Credentials:</p>
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p>Customer: customer@example.com / password</p>
+                <p>Staff: staff@example.com / password</p>
+                <p>Admin: admin@example.com / password</p>
+              </div>
             </div>
+          </CardContent>
+        </Card>
+      </main>
 
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">Mật Khẩu</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="123456"
-                className="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition"
-                disabled={isLoading}
-              />
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-primary text-primary-foreground py-2 rounded-lg font-medium hover:bg-primary/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? "Đang đăng nhập..." : "Đăng Nhập"}
-            </button>
-          </form>
-
-          {/* Back to Home */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-muted-foreground">
-              Quay lại{" "}
-              <Link href="/" className="text-accent hover:underline">
-                trang chủ
-              </Link>
-            </p>
-          </div>
-        </div>
-      </div>
+      <Footer />
     </div>
   )
 }
