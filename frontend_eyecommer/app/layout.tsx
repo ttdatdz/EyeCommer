@@ -1,17 +1,15 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Geist, Geist_Mono, Playfair_Display } from "next/font/google"
+import { Geist, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
-import { AuthProvider } from "./context/auth-context"
 
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
-const _playfairDisplay = Playfair_Display({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "OPTICA - Cửa hàng kính mắt cao cấp",
-  description: "Khám phá bộ sưu tập kính mắt tinh tế từ các thương hiệu hàng đầu thế giới",
+  title: "VisionHub - Premium Eyewear Store",
+  description: "Discover premium eyeglasses, sunglasses, and eyewear from top brands. Perfect vision, perfect style.",
   generator: "v0.app",
   icons: {
     icon: [
@@ -38,9 +36,9 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="vi">
+    <html lang="en" suppressHydrationWarning>
       <body className={`font-sans antialiased`}>
-        <AuthProvider>{children}</AuthProvider>
+        {children}
         <Analytics />
       </body>
     </html>
