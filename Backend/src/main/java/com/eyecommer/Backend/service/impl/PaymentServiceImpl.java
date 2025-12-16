@@ -20,87 +20,117 @@ public class PaymentServiceImpl implements PaymentService {
     private final CartItemRepository cartItemRepository;
     private final CartRepository cartRepository;
 
+//    @Override
+//    @Transactional
+//    public void handlePaymentSuccess(String orderCode) {
+//
+//        OrderSnapshot snapshot = orderSnapshotRepository
+//                .findByOrderCode(orderCode)
+//                .orElseThrow(() -> new RuntimeException("Order not found"));
+//
+//        Cart cart = cartRepository
+//                .findByUserId(snapshot.getUser().getId())
+//                .orElseThrow(() -> new RuntimeException("Cart not found"));
+//
+//        for (OrderItemSnapshot item : snapshot.getItems()) {
+//
+//            // 1 LOCK VARIANT
+//            VariantProduct variant = variantProductRepository
+//                    .findByIdForUpdate(item.getVariantId())
+//                    .orElseThrow();
+//
+//            // 2 TRỪ KHO THẬT
+//            variant.setStock(variant.getStock() - item.getQuantity());
+//
+//            // 3 GIẢI PHÓNG RESERVED
+//            variant.setReservedStock(
+//                    variant.getReservedStock() - item.getQuantity()
+//            );
+//
+//            // 4 UPDATE CART ITEM ĐÚNG LOGIC
+//            CartItem cartItem = cartItemRepository
+//                    .findByCartIdAndVariantProductId(cart.getId(), variant.getId())
+//                    .orElse(null);
+//
+//            if (cartItem == null) {
+//                continue; // item này không còn trong cart → skip
+//            }
+//
+//            int checkoutQty = item.getQuantity();
+//            int cartQty = cartItem.getQuantity();
+//
+//            if (checkoutQty == cartQty) {
+//                // xoá
+//                cartItemRepository.delete(cartItem);
+//
+//            } else if (checkoutQty < cartQty) {
+//                // giảm
+//                cartItem.setQuantity(cartQty - checkoutQty);
+//                cartItemRepository.save(cartItem);
+//
+//            } else {
+//                // không thể xảy ra nếu checkout validate đúng
+//                throw new RuntimeException("Checkout quantity exceeds cart quantity");
+//            }
+//        }
+//
+//        snapshot.setPaymentStatus(PaymentStatus.PAID);
+//        orderSnapshotRepository.save(snapshot);
+//    }
+//
+//    @Override
+//    @Transactional
+//    public void handlePaymentFail(String orderCode) {
+//
+//        OrderSnapshot snapshot = orderSnapshotRepository
+//                .findByOrderCode(orderCode)
+//                .orElseThrow(() -> new RuntimeException("Order not found"));
+//
+//        if (!PaymentStatus.UNPAID.name().equals(snapshot.getPaymentStatus())) {
+//            return; // chỉ trả kho nếu chưa trả
+//        }
+//
+//        for (OrderItemSnapshot item : snapshot.getItems()) {
+//
+//            VariantProduct variant = variantProductRepository
+//                    .findByIdForUpdate(item.getVariantId())
+//                    .orElseThrow(() -> new RuntimeException("Variant not found"));
+//
+//            variant.setReservedStock(
+//                    variant.getReservedStock() - item.getQuantity()
+//            );
+//        }
+//
+//        snapshot.setPaymentStatus(PaymentStatus.FAILED);
+//    }
+
     @Override
     @Transactional
     public void handlePaymentSuccess(String orderCode) {
 
         OrderSnapshot snapshot = orderSnapshotRepository
                 .findByOrderCode(orderCode)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new RuntimeException("Snapshot not found"));
 
-        Cart cart = cartRepository
-                .findByUserId(snapshot.getUser().getId())
-                .orElseThrow(() -> new RuntimeException("Cart not found"));
-
-        for (OrderItemSnapshot item : snapshot.getItems()) {
-
-            // 1 LOCK VARIANT
-            VariantProduct variant = variantProductRepository
-                    .findByIdForUpdate(item.getVariantId())
-                    .orElseThrow();
-
-            // 2 TRỪ KHO THẬT
-            variant.setStock(variant.getStock() - item.getQuantity());
-
-            // 3 GIẢI PHÓNG RESERVED
-            variant.setReservedStock(
-                    variant.getReservedStock() - item.getQuantity()
-            );
-
-            // 4 UPDATE CART ITEM ĐÚNG LOGIC
-            CartItem cartItem = cartItemRepository
-                    .findByCartIdAndVariantProductId(cart.getId(), variant.getId())
-                    .orElse(null);
-
-            if (cartItem == null) {
-                continue; // item này không còn trong cart → skip
-            }
-
-            int checkoutQty = item.getQuantity();
-            int cartQty = cartItem.getQuantity();
-
-            if (checkoutQty == cartQty) {
-                // xoá
-                cartItemRepository.delete(cartItem);
-
-            } else if (checkoutQty < cartQty) {
-                // giảm
-                cartItem.setQuantity(cartQty - checkoutQty);
-                cartItemRepository.save(cartItem);
-
-            } else {
-                // không thể xảy ra nếu checkout validate đúng
-                throw new RuntimeException("Checkout quantity exceeds cart quantity");
-            }
+        if (snapshot.getPaymentStatus() == PaymentStatus.PAID) {
+            return;
         }
 
         snapshot.setPaymentStatus(PaymentStatus.PAID);
-        orderSnapshotRepository.save(snapshot);
     }
-
     @Override
     @Transactional
     public void handlePaymentFail(String orderCode) {
 
         OrderSnapshot snapshot = orderSnapshotRepository
                 .findByOrderCode(orderCode)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new RuntimeException("Snapshot not found"));
 
-        if (!PaymentStatus.UNPAID.name().equals(snapshot.getPaymentStatus())) {
-            return; // chỉ trả kho nếu chưa trả
-        }
-
-        for (OrderItemSnapshot item : snapshot.getItems()) {
-
-            VariantProduct variant = variantProductRepository
-                    .findByIdForUpdate(item.getVariantId())
-                    .orElseThrow(() -> new RuntimeException("Variant not found"));
-
-            variant.setReservedStock(
-                    variant.getReservedStock() - item.getQuantity()
-            );
+        if (snapshot.getPaymentStatus() != PaymentStatus.UNPAID) {
+            return;
         }
 
         snapshot.setPaymentStatus(PaymentStatus.FAILED);
     }
+
 }

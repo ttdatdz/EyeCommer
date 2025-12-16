@@ -8,9 +8,11 @@ import com.eyecommer.Backend.mapper.OrderSnapshotMapper;
 import com.eyecommer.Backend.model.*;
 import com.eyecommer.Backend.repository.*;
 import com.eyecommer.Backend.service.CheckoutService;
+import com.eyecommer.Backend.service.OrderSnapshotService;
 import com.eyecommer.Backend.service.VNPAYService;
 import com.eyecommer.Backend.service.VoucherService;
 import com.eyecommer.Backend.utils.PaymentStatus;
+import com.eyecommer.Backend.utils.SnapshotStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,7 @@ public class CheckoutServiceImpl implements CheckoutService {
     private final VNPAYService vnpayService;
     private final OrderSnapshotMapper orderSnapshotMapper;
     private final VariantProductRepository variantProductRepository;
+    private final OrderSnapshotService orderSnapshotService;
 
     @Override
     @Transactional
@@ -75,7 +78,7 @@ public class CheckoutServiceImpl implements CheckoutService {
         snapshot.setAddressDetail(address.getAddressDetail());
         snapshot.setPaymentMethod(request.getPaymentMethod());
         snapshot.setPaymentStatus(PaymentStatus.UNPAID);
-
+        snapshot.setStatus(SnapshotStatus.PENDING);
         double totalAmount = 0;
 
         // 6. LOCK + RESERVE STOCK
@@ -148,6 +151,7 @@ public class CheckoutServiceImpl implements CheckoutService {
         if ("COD".equalsIgnoreCase(request.getPaymentMethod())) {
             // COD: coi như chấp nhận giữ kho
             updateCartAfterCheckout(cartItems, qtyMap);
+            orderSnapshotService.confirmSnapshot(snapshot.getOrderCode());
             return orderSnapshotMapper.toCheckoutResponseDTO(snapshot, null);
         }
 

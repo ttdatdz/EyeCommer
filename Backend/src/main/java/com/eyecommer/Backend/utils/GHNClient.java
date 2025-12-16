@@ -1,6 +1,9 @@
 package com.eyecommer.Backend.utils;
 
+import com.eyecommer.Backend.dto.request.GHNAvailableServiceRequest;
 import com.eyecommer.Backend.dto.request.GHNCreateOrderRequest;
+import com.eyecommer.Backend.dto.request.GHNFeeRequest;
+import com.eyecommer.Backend.dto.request.GHNLeadTimeRequest;
 import com.eyecommer.Backend.dto.response.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,6 +12,9 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @Component
@@ -51,6 +57,27 @@ public class GHNClient {
         return response.getBody();
     }
 
+    public GHNFeeResponse calculateFee(GHNFeeRequest request) {
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("Token", token);
+        headers.set("ShopId", String.valueOf(shopId));
+
+        HttpEntity<GHNFeeRequest> entity =
+                new HttpEntity<>(request, headers);
+
+        ResponseEntity<GHNResponseDTO<GHNFeeResponse>> response =
+                restTemplate.exchange(
+                        baseUrl + "/shiip/public-api/v2/shipping-order/fee",
+                        HttpMethod.POST,
+                        entity,
+                        new ParameterizedTypeReference<>() {}
+                );
+
+        return response.getBody().getData();
+    }
+
     /* ================= CANCEL ORDER ================= */
     public void cancelOrder(String shipmentCode) {
 
@@ -85,18 +112,41 @@ public class GHNClient {
         return response.getBody().getData();
     }
 
-//    public List<DistrictResponseDTO> getDistricts(Integer provinceId) {
-//
-//        ResponseEntity<GHNResponseDTO<List<DistrictResponseDTO>>> response =
-//                restTemplate.exchange(
-//                        baseUrl + "/shiip/public-api/master-data/district?province_id=" + provinceId,
-//                        HttpMethod.GET,
-//                        new HttpEntity<>(headers()),
-//                        new ParameterizedTypeReference<>() {}
-//                );
-//
-//        return response.getBody().getData();
-//    }
+
+    //Get Lead Time
+    public GHNLeadTimeResponse getLeadTime(GHNLeadTimeRequest request) {
+
+        HttpEntity<GHNLeadTimeRequest> entity =
+                new HttpEntity<>(request, headers());
+
+        ResponseEntity<GHNResponseDTO<GHNLeadTimeResponse>> response =
+                restTemplate.exchange(
+                        baseUrl + "/shiip/public-api/v2/shipping-order/leadtime",
+                        HttpMethod.POST,
+                        entity,
+                        new ParameterizedTypeReference<>() {}
+                );
+
+        return response.getBody().getData();
+    }
+    // Get Available Services
+    public List<GHNAvailableServiceResponse> getAvailableServices(
+            GHNAvailableServiceRequest request
+    ) {
+
+        HttpEntity<GHNAvailableServiceRequest> entity =
+                new HttpEntity<>(request, headers());
+
+        ResponseEntity<GHNResponseDTO<List<GHNAvailableServiceResponse>>> response =
+                restTemplate.exchange(
+                        baseUrl + "/shiip/public-api/v2/shipping-order/available-services",
+                        HttpMethod.POST,
+                        entity,
+                        new ParameterizedTypeReference<>() {}
+                );
+
+        return response.getBody().getData();
+    }
     public List<DistrictResponseDTO> getDistricts(Integer province_id) {
 
         HttpEntity<?> entity =
@@ -125,4 +175,5 @@ public class GHNClient {
 
         return response.getBody().getData();
     }
+
 }

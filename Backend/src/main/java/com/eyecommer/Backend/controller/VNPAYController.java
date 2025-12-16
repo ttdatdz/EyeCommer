@@ -1,7 +1,10 @@
 package com.eyecommer.Backend.controller;
 
+import com.eyecommer.Backend.service.OrderSnapshotService;
 import com.eyecommer.Backend.service.PaymentService;
 import com.eyecommer.Backend.service.VNPAYService;
+import com.eyecommer.Backend.service.impl.OrderSnapshotServiceImpl;
+import com.eyecommer.Backend.utils.SnapshotCancelReason;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,6 +30,7 @@ public class VNPAYController {
             "https://english-vocabulary-system.vercel.app/VnpayResult";
     private static final String FRONTEND_FAIL_URL =
             "http://localhost:3000/payment-fail";
+    private final OrderSnapshotService orderSnapshotService;
 
     @GetMapping("/return")
     public void vnpayReturn(
@@ -52,7 +56,7 @@ public class VNPAYController {
         if ("00".equals(responseCode)) {
 
             paymentService.handlePaymentSuccess(orderCode);
-
+            orderSnapshotService.confirmSnapshot(orderCode);
             response.sendRedirect(
                     FRONTEND_SUCCESS_URL + "?orderCode=" + orderCode
             );
@@ -60,7 +64,7 @@ public class VNPAYController {
         } else {
 
             paymentService.handlePaymentFail(orderCode);
-
+            orderSnapshotService.cancelSnapshot(orderCode, SnapshotCancelReason.PAYMENT_FAILED);
             response.sendRedirect(
                     FRONTEND_FAIL_URL + "?orderCode=" + orderCode
             );

@@ -1,11 +1,7 @@
 package com.eyecommer.Backend.service.impl;
 
-import com.eyecommer.Backend.dto.request.ConfirmOrderRequestDTO;
-import com.eyecommer.Backend.dto.request.GHNCreateOrderRequest;
-import com.eyecommer.Backend.dto.response.DistrictResponseDTO;
-import com.eyecommer.Backend.dto.response.GHNCreateOrderResponse;
-import com.eyecommer.Backend.dto.response.ProvinceResponseDTO;
-import com.eyecommer.Backend.dto.response.WardResponseDTO;
+import com.eyecommer.Backend.dto.request.*;
+import com.eyecommer.Backend.dto.response.*;
 import com.eyecommer.Backend.mapper.GHNMapper;
 import com.eyecommer.Backend.model.Order;
 import com.eyecommer.Backend.model.Shipments;
@@ -27,6 +23,14 @@ public class GHNServiceImpl implements GHNService {
     private final ShipmentRepository shipmentRepository;
     private final GHNMapper ghnMapper;
 
+
+
+    //Get expected time
+    @Override
+    public GHNLeadTimeResponse calculateLeadTime(GHNLeadTimeRequest request) {
+        return ghnClient.getLeadTime(request);
+    }
+
     // ===== LOCATION APIs =====
 
     @Override
@@ -34,6 +38,12 @@ public class GHNServiceImpl implements GHNService {
         return ghnClient.getProvinces();
     }
 
+    @Override
+    public List<GHNAvailableServiceResponse> getAvailableServices(
+            GHNAvailableServiceRequest request
+    ) {
+        return ghnClient.getAvailableServices(request);
+    }
     @Override
     public List<DistrictResponseDTO> getDistricts(Integer provinceId) {
         return ghnClient.getDistricts(provinceId);
@@ -44,12 +54,22 @@ public class GHNServiceImpl implements GHNService {
         return ghnClient.getWards(districtId);
     }
 
+    @Override
+    public GHNFeeResponse calculateShippingFee(
+            ShippingFeeEstimateRequest request
+    ) {
+
+        GHNFeeRequest ghnReq =
+                ghnMapper.toGHNFeeRequest(request);
+
+        return ghnClient.calculateFee(ghnReq);
+    }
     // ===== SHIPPING =====
     @Override
-    public void createShipment(Order order, ConfirmOrderRequestDTO request) {
+    public void createShipment(Order order) {
 
         GHNCreateOrderRequest ghnReq =
-                ghnMapper.toCreateOrderRequest(order, request);
+                ghnMapper.toCreateOrderRequest(order);
 
         GHNCreateOrderResponse response =
                 ghnClient.createOrder(ghnReq);
@@ -59,6 +79,7 @@ public class GHNServiceImpl implements GHNService {
         shipment.setCarrier("GHN");
         shipment.setShipmentCode(response.getData().getOrder_code());
         shipment.setShippingFee(response.getData().getTotal_fee());
+        shipment.setExpectedDeliveryTime(response.getData().getExpected_delivery_time());
         shipment.setStatus("CREATED");
 
         shipmentRepository.save(shipment);

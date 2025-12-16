@@ -11,4 +11,6 @@ public interface ShipmentRepository extends JpaRepository<Shipments, Long> {
     Optional<Shipments> findByShipmentCode(String shipmentCode);
 
     Optional<Shipments> findByOrder(Order order);
+
+    Boolean existsByOrder(Order order);
 }

@@ -6,9 +6,7 @@ import lombok.Setter;
 @Getter
 @Setter
 public class ConfirmOrderRequestDTO {
-
     private String orderCode;
-
     private Integer serviceTypeId; // 2 = tiêu chuẩn
-    private Integer paymentTypeId; // 2 = shop trả
+    private Integer paymentTypeId; // 1: shop trả 2:người mua trả
 }

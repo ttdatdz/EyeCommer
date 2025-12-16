@@ -6,10 +6,7 @@ import com.eyecommer.Backend.dto.response.OrderDetailResponseDTO;
 import com.eyecommer.Backend.dto.response.OrderSummaryResponseDTO;
 import com.eyecommer.Backend.mapper.OrderMapper;
 import com.eyecommer.Backend.model.*;
-import com.eyecommer.Backend.repository.AddressRepository;
-import com.eyecommer.Backend.repository.OrderRepository;
-import com.eyecommer.Backend.repository.OrderSnapshotRepository;
-import com.eyecommer.Backend.repository.VariantProductRepository;
+import com.eyecommer.Backend.repository.*;
 import com.eyecommer.Backend.service.GHNService;
 import com.eyecommer.Backend.service.OrderService;
 import com.eyecommer.Backend.utils.OrderStatus;
@@ -20,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
 
 @Service
@@ -29,6 +27,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final OrderMapper orderMapper;
     private final GHNService ghnService;
+    private final ShipmentRepository shipmentRepository;
 
     @Override
     public OrderDetailResponseDTO getOrderDetail(String orderCode) {
@@ -53,22 +52,33 @@ public class OrderServiceImpl implements OrderService {
                 .toList();
     }
 
+    @Transactional
     @Override
     public void confirmOrder(ConfirmOrderRequestDTO request) {
+
         Order order = orderRepository.findByOrderCode(request.getOrderCode())
                 .orElseThrow(() -> new RuntimeException("Order not found"));
 
+        // 1️⃣ Check trạng thái
         if (order.getStatus() != OrderStatus.PENDING) {
             throw new RuntimeException("Order cannot be confirmed");
         }
 
-        // 1️⃣ Gọi GHN tạo shipment
-        ghnService.createShipment(order, request);
+        // 2️⃣ Check shipment tồn tại
+        if (shipmentRepository.existsByOrder(order)) {
+            throw new RuntimeException("Shipment already created");
+        }
 
-        // 2️⃣ Update order
+        // 3️⃣ Gọi GHN tạo shipment (FAIL → rollback)
+        ghnService.createShipment(order);
+
+        // 4️⃣ Update order
         order.setStatus(OrderStatus.CONFIRMED);
         order.setConfirmedAt(LocalDateTime.now());
+
+        orderRepository.save(order);
     }
+
 
     @Override
     public void cancelOrder(CancelOrderRequestDTO request) {

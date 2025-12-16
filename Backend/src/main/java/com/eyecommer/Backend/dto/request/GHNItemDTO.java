@@ -1,12 +1,14 @@
 package com.eyecommer.Backend.dto.request;
 
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
-@Getter
-@Setter
+@Data
 public class GHNItemDTO {
     private String name;
+    private String code;
     private Integer quantity;
-    private Double price;
+    private Integer price;
+    private Integer weight;
 }
