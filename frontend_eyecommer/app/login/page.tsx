@@ -8,28 +8,64 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
-import { login } from "@/lib/auth-store"
+import { login as loginApi } from "@/lib/services/auth"
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState("")
+  const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const user = login(email, password)
+    setError("")
 
-    if (user) {
-      if (user.role === "admin") {
-        router.push("/admin/dashboard")
-      } else if (user.role === "staff") {
-        router.push("/staff/dashboard")
-      } else {
-        router.push("/customer/dashboard")
+    try {
+      const res: any = await loginApi({ username, password })
+
+      // Normalize response shapes:
+      // - { accessToken, refreshToken, user, ... }
+      // - { status, message, data: { accessToken, refreshToken, userId, ... } }
+      // - user object directly
+      const token = res?.token || res?.accessToken || res?.access_token || res?.data?.accessToken
+      const refreshToken = res?.refreshToken || res?.data?.refreshToken
+      const user = res?.user || (res?.data?.user ? res?.data?.user : (res?.username || res?.email ? res : null))
+      const userId = res?.userId || res?.data?.userId
+
+      if (token) {
+        localStorage.setItem('accessToken', token) // Changed from 'token' to 'accessToken'
       }
-    } else {
-      setError("Invalid email or password")
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken)
+      }
+      if (!user && userId) {
+        // Minimal placeholder so UI recognizes a signed-in state until a proper profile is fetched
+        // TODO: Fetch full user profile from /api/users/me or similar endpoint
+        const minimalUser = { 
+          id: userId, 
+          username,
+          role: 'customer' // Default assumption; backend should provide actual role
+        }
+        localStorage.setItem('currentUser', JSON.stringify(minimalUser))
+        router.push('/customer/dashboard')
+        return
+      }
+
+      if (user) {
+        localStorage.setItem('currentUser', JSON.stringify(user))
+
+        if (user.role === 'admin') {
+          router.push('/admin/dashboard')
+        } else if (user.role === 'staff') {
+          router.push('/staff/dashboard')
+        } else {
+          router.push('/customer/dashboard')
+        }
+      } else {
+        setError('Login succeeded but server did not return user data')
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Invalid username or password')
     }
   }
 
@@ -45,12 +81,12 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold mb-2">Email</label>
+                <label className="block text-sm font-semibold mb-2">Username</label>
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="your username"
                   className="w-full px-4 py-2 border border-border rounded bg-card text-foreground"
                   required
                 />
@@ -78,9 +114,9 @@ export default function LoginPage() {
             <div className="mt-6 pt-6 border-t border-border">
               <p className="text-xs text-muted-foreground mb-3">Demo Credentials:</p>
               <div className="space-y-1 text-xs text-muted-foreground">
-                <p>Customer: customer@example.com / password</p>
-                <p>Staff: staff@example.com / password</p>
-                <p>Admin: admin@example.com / password</p>
+                <p>Customer: customer / password</p>
+                <p>Staff: staff / password</p>
+                <p>Admin: admin / password</p>
               </div>
             </div>
           </CardContent>
