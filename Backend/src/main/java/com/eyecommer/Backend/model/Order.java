@@ -37,6 +37,9 @@ private String orderCode;
     @Column(name = "total_amount", nullable = false)
     private Double totalAmount;
 
+    @Column(name = "cancel_reason")
+    private String cancelReason;
+
     // ====== Lifecycle ======
     private LocalDateTime confirmedAt;
     private LocalDateTime canceledAt;

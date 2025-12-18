@@ -4,12 +4,16 @@ import com.eyecommer.Backend.dto.request.CancelOrderRequestDTO;
 import com.eyecommer.Backend.dto.request.ConfirmOrderRequestDTO;
 import com.eyecommer.Backend.dto.response.OrderDetailResponseDTO;
 import com.eyecommer.Backend.dto.response.OrderSummaryResponseDTO;
+import com.eyecommer.Backend.dto.response.PageResponse;
 import com.eyecommer.Backend.dto.response.ResponseData;
+import com.eyecommer.Backend.model.User;
+import com.eyecommer.Backend.repository.UserRepository;
 import com.eyecommer.Backend.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -18,6 +22,8 @@ public class OrderController {
 
     @Autowired
     private OrderService orderService;
+    @Autowired
+    private UserRepository userRepository;
 
     // ===================== GET ORDER DETAIL =====================
     @GetMapping("/{orderCode}")
@@ -39,43 +45,38 @@ public class OrderController {
         }
     }
 
-    // ===================== GET MY ORDERS =====================
-    @GetMapping("/my/{userId}")
-    public ResponseData<?> getMyOrders(@PathVariable Long userId) {
+    // ===================== GET my orders =====================
+    @GetMapping("/my")
+    public ResponseData<?> getMyOrders(
+            Principal principal,
+            @RequestParam(defaultValue = "0") int pageNo,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = "") String[] search
+    ) {
+        User user = userRepository.findByUsername(principal.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
         try {
-            List<OrderSummaryResponseDTO> orders =
-                    orderService.getMyOrders(userId);
-
-            return new ResponseData<>(
-                    HttpStatus.OK.value(),
-                    "Lấy danh sách đơn hàng của tôi thành công",
-                    orders
-            );
+            PageResponse<?> pageResponse = orderService.getMyOrders(user.getId(), pageNo, pageSize, sortBy, search);
+            return new ResponseData<>(HttpStatus.OK.value(), "Lấy danh sách đơn hàng của tôi thành công", pageResponse);
         } catch (Exception e) {
-            return new ResponseData<>(
-                    HttpStatus.BAD_REQUEST.value(),
-                    "Lấy đơn hàng thất bại: " + e.getMessage()
-            );
+            return new ResponseData<>(HttpStatus.BAD_REQUEST.value(), "Lấy đơn hàng thất bại: " + e.getMessage());
         }
     }
 
-    // ===================== GET ALL ORDERS (ADMIN) =====================
+    // ===================== GET all orders (admin) =====================
     @GetMapping
-    public ResponseData<?> getAllOrders() {
+    public ResponseData<?> getAllOrders(
+            @RequestParam(defaultValue = "0") int pageNo,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(defaultValue = "") String[] search
+    ) {
         try {
-            List<OrderSummaryResponseDTO> orders =
-                    orderService.getAllOrders();
-
-            return new ResponseData<>(
-                    HttpStatus.OK.value(),
-                    "Lấy danh sách tất cả đơn hàng thành công",
-                    orders
-            );
+            PageResponse<?> pageResponse = orderService.getAllOrders(pageNo, pageSize, sortBy, search);
+            return new ResponseData<>(HttpStatus.OK.value(), "Lấy danh sách tất cả đơn hàng thành công", pageResponse);
         } catch (Exception e) {
-            return new ResponseData<>(
-                    HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                    "Lấy danh sách đơn hàng thất bại: " + e.getMessage()
-            );
+            return new ResponseData<>(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Lấy danh sách đơn hàng thất bại: " + e.getMessage());
         }
     }
 
@@ -105,16 +106,19 @@ public class OrderController {
             @RequestBody CancelOrderRequestDTO request
     ) {
         try {
-            orderService.cancelOrder(request);
+            orderService.cancelOrder(
+                    request.getOrderCode(),
+                    request.getReason()
+            );
 
             return new ResponseData<>(
-                    HttpStatus.OK.value(),
+                    200,
                     "Hủy đơn hàng thành công"
             );
         } catch (Exception e) {
             return new ResponseData<>(
-                    HttpStatus.BAD_REQUEST.value(),
-                    "Hủy đơn hàng thất bại: " + e.getMessage()
+                    400,
+                    e.getMessage()
             );
         }
     }

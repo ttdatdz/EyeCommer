@@ -1,5 +1,6 @@
 package com.eyecommer.Backend.model;
 
+import com.eyecommer.Backend.utils.ShipmentStatus;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,9 +24,9 @@ public class Shipments extends AbstractEntity<Long> {
     @Column(name = "shipment_code", nullable = false, unique = true)
     private String shipmentCode;
 
-
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private String status;
+    private ShipmentStatus status;
 
 
     @Column(name = "shipping_fee")

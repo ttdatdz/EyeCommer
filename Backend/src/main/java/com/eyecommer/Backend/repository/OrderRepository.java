@@ -1,6 +1,7 @@
 package com.eyecommer.Backend.repository;
 
 import com.eyecommer.Backend.model.Order;
+import com.eyecommer.Backend.utils.OrderStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -26,4 +27,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findByOrderCode(String orderCode);
 
     List<Order> findByUserId(Long userId);
+
+    Optional<Order> findByOrderCodeAndStatus(String orderCode, OrderStatus status);
 }

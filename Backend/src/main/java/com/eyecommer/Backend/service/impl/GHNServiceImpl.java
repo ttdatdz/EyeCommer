@@ -8,6 +8,7 @@ import com.eyecommer.Backend.model.Shipments;
 import com.eyecommer.Backend.repository.ShipmentRepository;
 import com.eyecommer.Backend.service.GHNService;
 import com.eyecommer.Backend.utils.GHNClient;
+import com.eyecommer.Backend.utils.ShipmentStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -80,7 +81,7 @@ public class GHNServiceImpl implements GHNService {
         shipment.setShipmentCode(response.getData().getOrder_code());
         shipment.setShippingFee(response.getData().getTotal_fee());
         shipment.setExpectedDeliveryTime(response.getData().getExpected_delivery_time());
-        shipment.setStatus("CREATED");
+        shipment.setStatus(ShipmentStatus.CREATED);
 
         shipmentRepository.save(shipment);
     }
@@ -93,7 +94,7 @@ public class GHNServiceImpl implements GHNService {
                         .orElseThrow(() -> new RuntimeException("Shipment not found"));
 
         ghnClient.cancelOrder(shipment.getShipmentCode());
-        shipment.setStatus("CANCELLED");
+        shipment.setStatus(ShipmentStatus.CANCELLED);
     }
 }
 

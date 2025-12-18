@@ -4,17 +4,18 @@ import com.eyecommer.Backend.dto.request.CancelOrderRequestDTO;
 import com.eyecommer.Backend.dto.request.ConfirmOrderRequestDTO;
 import com.eyecommer.Backend.dto.response.OrderDetailResponseDTO;
 import com.eyecommer.Backend.dto.response.OrderSummaryResponseDTO;
+import com.eyecommer.Backend.dto.response.PageResponse;
 
 import java.util.List;
 
 public interface OrderService {
     OrderDetailResponseDTO getOrderDetail(String orderCode);
 
-    List<OrderSummaryResponseDTO> getMyOrders(Long userId);
+    PageResponse<?> getMyOrders(Long userId, int pageNo, int pageSize, String sortBy, String[] search);
 
-    List<OrderSummaryResponseDTO> getAllOrders();
+    PageResponse<?> getAllOrders(int pageNo, int pageSize, String sortBy, String[] search);
 
     void confirmOrder(ConfirmOrderRequestDTO request);
 
-    void cancelOrder(CancelOrderRequestDTO request);
+    void cancelOrder(String orderCode, String reason);
 }

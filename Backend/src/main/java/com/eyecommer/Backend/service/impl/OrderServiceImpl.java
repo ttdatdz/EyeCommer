@@ -4,13 +4,18 @@ import com.eyecommer.Backend.dto.request.CancelOrderRequestDTO;
 import com.eyecommer.Backend.dto.request.ConfirmOrderRequestDTO;
 import com.eyecommer.Backend.dto.response.OrderDetailResponseDTO;
 import com.eyecommer.Backend.dto.response.OrderSummaryResponseDTO;
+import com.eyecommer.Backend.dto.response.PageResponse;
 import com.eyecommer.Backend.mapper.OrderMapper;
 import com.eyecommer.Backend.model.*;
 import com.eyecommer.Backend.repository.*;
+import com.eyecommer.Backend.repository.critetia.GenericSearchQueryCriteriaConsumer;
+import com.eyecommer.Backend.repository.critetia.SearchCriteria;
+import com.eyecommer.Backend.repository.critetia.SearchQueryCriteriaConsumer;
 import com.eyecommer.Backend.service.GHNService;
 import com.eyecommer.Backend.service.OrderService;
 import com.eyecommer.Backend.utils.OrderStatus;
 import com.eyecommer.Backend.utils.PaymentStatus;
+import com.eyecommer.Backend.utils.SearchCriteriaUtils;
 import com.eyecommer.Backend.utils.SnapshotStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,6 +33,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderMapper orderMapper;
     private final GHNService ghnService;
     private final ShipmentRepository shipmentRepository;
+    private final GenericSearchRepository genericSearchRepository;
 
     @Override
     public OrderDetailResponseDTO getOrderDetail(String orderCode) {
@@ -37,19 +43,67 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public List<OrderSummaryResponseDTO> getMyOrders(Long userId) {
-        return orderRepository.findByUserId(userId)
+    public PageResponse<?> getMyOrders(Long userId, int pageNo, int pageSize, String sortBy, String[] search) {
+        // 1. Convert search -> criteria
+        List<SearchCriteria> criteriaList = SearchCriteriaUtils.convert(search);
+
+        // Inject thêm filter userId vào → đảm bảo chỉ lọc order của user đó
+        criteriaList.add(new SearchCriteria("user.id", ":", userId));
+
+        // 2. Khởi tạo consumer filter mặc định (nếu cần)
+        SearchQueryCriteriaConsumer<Order> consumer = new GenericSearchQueryCriteriaConsumer<>(null,null,null);
+
+        // 3. Search theo generic repo
+        PageResponse<?> rawPage = genericSearchRepository.searchByCriteria(
+                Order.class,
+                pageNo,
+                pageSize,
+                criteriaList,
+                sortBy,
+                consumer
+        );
+
+        // 4. Convert list entity -> DTO
+        List<OrderSummaryResponseDTO> dtoList = ((List<Order>) rawPage.getItems())
                 .stream()
                 .map(orderMapper::toSummaryDTO)
                 .toList();
+
+        // 5. Trả về PageResponse
+        return PageResponse.<List<OrderSummaryResponseDTO>>builder()
+                .pageNo(rawPage.getPageNo())
+                .pageSize(rawPage.getPageSize())
+                .totalPage(rawPage.getTotalPage())
+                .items(dtoList)
+                .build();
     }
 
     @Override
-    public List<OrderSummaryResponseDTO> getAllOrders() {
-        return orderRepository.findAll()
+    public PageResponse<?> getAllOrders(int pageNo, int pageSize, String sortBy, String[] search) {
+        // giống getMyOrders nhưng không filter theo user
+        List<SearchCriteria> criteriaList = SearchCriteriaUtils.convert(search);
+        SearchQueryCriteriaConsumer<Order> consumer = new GenericSearchQueryCriteriaConsumer<>(null,null,null);
+
+        PageResponse<?> rawPage = genericSearchRepository.searchByCriteria(
+                Order.class,
+                pageNo,
+                pageSize,
+                criteriaList,
+                sortBy,
+                consumer
+        );
+
+        List<OrderSummaryResponseDTO> dtoList = ((List<Order>) rawPage.getItems())
                 .stream()
                 .map(orderMapper::toSummaryDTO)
                 .toList();
+
+        return PageResponse.<List<OrderSummaryResponseDTO>>builder()
+                .pageNo(rawPage.getPageNo())
+                .pageSize(rawPage.getPageSize())
+                .totalPage(rawPage.getTotalPage())
+                .items(dtoList)
+                .build();
     }
 
     @Transactional
@@ -80,19 +134,38 @@ public class OrderServiceImpl implements OrderService {
     }
 
 
-    @Override
-    public void cancelOrder(CancelOrderRequestDTO request) {
-        Order order = orderRepository.findByOrderCode(request.getOrderCode())
-                .orElseThrow(() -> new RuntimeException("Order not found"));
 
-        if (order.getStatus() == OrderStatus.DELIVERED) {
-            throw new RuntimeException("Delivered order cannot be cancelled");
+    @Override
+    @Transactional
+    public void cancelOrder(String orderCode, String reason) {
+
+        Order order = orderRepository.findByOrderCode(orderCode)
+                .orElseThrow(() ->
+                        new RuntimeException("Order not found"));
+
+        //  Chỉ cho hủy khi PENDING
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new RuntimeException(
+                    "Chỉ được hủy đơn khi trạng thái là PENDING"
+            );
         }
 
+        // ✅ Hoàn kho thật (đã trừ ở confirmSnapshot)
+        for (OrderItem item : order.getOrderItems()) {
+
+            VariantProduct variant = item.getVariantProduct();
+
+            variant.setStock(
+                    variant.getStock() + item.getQuantity()
+            );
+        }
+
+        // ✅ Update order
         order.setStatus(OrderStatus.CANCELLED);
         order.setCanceledAt(LocalDateTime.now());
+        order.setCancelReason(reason);
 
-        // (Optional) refund logic nếu cần
+        orderRepository.save(order);
     }
 
 }
