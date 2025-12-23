@@ -76,6 +76,7 @@ public class AppConfig {
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
                         .requestMatchers("/api/products/**").hasAnyAuthority("admin", "staff")
                         .requestMatchers("/api/vouchers/**").hasAnyAuthority("admin", "staff")
+                        .requestMatchers("/api/inventory/**").hasAnyAuthority("admin")
                         .requestMatchers("/api/cart/**").hasAnyAuthority("user")
                         .requestMatchers("/api/addresses/**").hasAnyAuthority("user")
                         .anyRequest().authenticated()
