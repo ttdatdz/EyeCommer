@@ -14,6 +14,9 @@ import com.eyecommer.Backend.repository.critetia.SearchQueryCriteriaConsumer;
 import com.eyecommer.Backend.service.InventoryService;
 import com.eyecommer.Backend.utils.SearchCriteriaUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -56,4 +59,5 @@ public class InventoryServiceImpl implements InventoryService {
                 .items(dtoList)
                 .build();
     }
+
 }
