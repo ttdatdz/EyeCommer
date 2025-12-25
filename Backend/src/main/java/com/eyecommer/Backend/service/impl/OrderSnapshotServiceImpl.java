@@ -8,11 +8,13 @@ import com.eyecommer.Backend.utils.PaymentStatus;
 import com.eyecommer.Backend.utils.SnapshotCancelReason;
 import com.eyecommer.Backend.utils.SnapshotStatus;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderSnapshotServiceImpl implements OrderSnapshotService {
 
     private final OrderSnapshotRepository snapshotRepo;
@@ -109,7 +111,8 @@ public class OrderSnapshotServiceImpl implements OrderSnapshotService {
                 .orElseThrow(() -> new RuntimeException("Snapshot not found"));
 
         if (snapshot.getStatus() != SnapshotStatus.PENDING) {
-            throw new RuntimeException("Snapshot already processed");
+            log.info("Snapshot already processed");
+            return;
         }
 
         if (snapshot.getPaymentStatus() != PaymentStatus.PAID
@@ -120,7 +123,7 @@ public class OrderSnapshotServiceImpl implements OrderSnapshotService {
         Address address = addressRepo.findById(snapshot.getAddressId())
                 .orElseThrow(() -> new RuntimeException("Address not found"));
 
-        // 1️⃣ Create Order
+        //  Create Order
         Order order = new Order();
         order.setOrderCode(snapshot.getOrderCode());
         order.setUser(snapshot.getUser());
@@ -131,7 +134,7 @@ public class OrderSnapshotServiceImpl implements OrderSnapshotService {
 
         orderRepo.save(order);
 
-        // 2️⃣ Trừ kho thật + giải phóng reserved
+        // Trừ kho thật + giải phóng reserved
         for (OrderItemSnapshot item : snapshot.getItems()) {
 
             VariantProduct variant = variantRepo
