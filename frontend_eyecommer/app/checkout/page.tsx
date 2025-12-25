@@ -9,12 +9,44 @@ import { Card, CardContent } from "@/components/ui/card"
 import Header from "@/components/layout/header"
 import Footer from "@/components/layout/footer"
 import { getCart, getCartTotal, clearCart } from "@/lib/cart-store"
+import { getProvinces, getDistricts, getWards, getAvailableServices, getFee, getLeadtime } from "@/lib/services/ghn"
+import { getCurrentUser } from "@/lib/auth-store"
+import { createVNPayPayment } from "@/lib/services/vnpay"
+import { createOrder } from "@/lib/services/order"
 
 export default function CheckoutPage() {
   const router = useRouter()
   const [step, setStep] = useState<"shipping" | "payment">("shipping")
   const [cartItems, setCartItems] = useState<any[]>([])
   const [cartTotal, setCartTotal] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Check if user is logged in
+  useEffect(() => {
+    // Check auth
+    const user = getCurrentUser()
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
+    
+    console.log('[Checkout] User:', user, 'Token:', token ? 'exists' : 'null')
+    
+    if (!user || !token) {
+      alert('Vui lòng đăng nhập để tiếp tục thanh toán')
+      router.push('/login')
+      return
+    }
+    
+    // Load cart
+    const items = getCart()
+    if (items.length === 0) {
+      alert('Giỏ hàng trống')
+      router.push('/products')
+      return
+    }
+    
+    setCartItems(items)
+    setCartTotal(getCartTotal())
+    setIsLoading(false)
+  }, [])
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -28,14 +60,60 @@ export default function CheckoutPage() {
     country: "Vietnam",
   })
 
+  // GHN/shipping state
+  const [provinces, setProvinces] = useState<any[]>([])
+  const [districts, setDistricts] = useState<any[]>([])
+  const [wards, setWards] = useState<any[]>([])
+  const [services, setServices] = useState<any[]>([])
+  const [selectedProvince, setSelectedProvince] = useState<number | "">("")
+  const [selectedDistrict, setSelectedDistrict] = useState<number | "">("")
+  const [selectedWard, setSelectedWard] = useState<string | "">("")
+  const [selectedService, setSelectedService] = useState<number | "">("")
+  const [shippingFee, setShippingFee] = useState<number | null>(null)
+  const [leadtime, setLeadtime] = useState<number | null>(null)
+  const [loadingShip, setLoadingShip] = useState(false)
+
   const [paymentMethod, setPaymentMethod] = useState<"vnpay" | "cod">("cod")
   const [voucherCode, setVoucherCode] = useState("")
 
   useEffect(() => {
-    const items = getCart()
-    setCartItems(items)
-    setCartTotal(getCartTotal())
+    getProvinces().then((res) => setProvinces(res?.data ?? [])).catch(() => {})
   }, [])
+
+  const handleCalculateShipping = async () => {
+    if (!selectedDistrict || !selectedWard || !selectedService) {
+      alert('Vui lòng chọn quận/huyện, phường/xã và loại dịch vụ')
+      return
+    }
+
+    setLoadingShip(true)
+    try {
+      const weight = cartItems.reduce((s, i) => s + (i.product.weight || 1000) * i.quantity, 0)
+      const feeRes = await getFee({
+        to_district_id: Number(selectedDistrict),
+        to_ward_code: selectedWard,
+        service_id: Number(selectedService),
+        weight,
+        length: 20,
+        width: 20,
+        height: 10,
+      })
+      setShippingFee((feeRes && feeRes.data && (feeRes.data.total ?? feeRes.data.service_fee)) || 0)
+
+      // Leadtime
+      const leadRes = await getLeadtime({
+        to_district_id: String(selectedDistrict),
+        to_ward_code: selectedWard,
+        service_id: String(selectedService),
+      })
+      setLeadtime(leadRes && leadRes.data && leadRes.data.leadtime ? leadRes.data.leadtime : null)
+    } catch (e) {
+      console.error(e)
+      alert('Không thể tính phí vận chuyển')
+    } finally {
+      setLoadingShip(false)
+    }
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target
@@ -45,27 +123,88 @@ export default function CheckoutPage() {
   const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault()
     if (step === "shipping") {
+      if (shippingFee === null) {
+        alert('Vui lòng tính phí vận chuyển trước khi tiếp tục')
+        return
+      }
       setStep("payment")
     }
   }
 
-  const handlePlaceOrder = (e: React.FormEvent) => {
+  const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Simulate order creation
-    const orderId = Math.random().toString(36).substr(2, 9).toUpperCase()
+    try {
+      // Create order first
+      const orderData = {
+        address: `${formData.address}, ${selectedWard}, ${selectedDistrict}, ${selectedProvince}`,
+        cartTotal: cartTotal,
+        shippingFee: shippingFee || 0,
+        discount: discount,
+        paymentMethod: paymentMethod,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        items: cartItems.map((item) => ({
+          productId: item.product.id,
+          variantId: item.product.id, // TODO: use actual variant ID when available
+          quantity: item.quantity,
+          price: item.product.price,
+        })),
+      }
 
-    clearCart()
+      console.log('[Checkout] Creating order:', orderData)
+      
+      const orderResponse = await createOrder(orderData)
+      
+      if (orderResponse.status !== 200) {
+        alert('Không thể tạo đơn hàng: ' + orderResponse.message)
+        return
+      }
 
-    // Show success and redirect
-    alert(`Order placed successfully! Order ID: ${orderId}`)
-    router.push(`/order-confirmation/${orderId}`)
+      const orderCode = orderResponse.data.orderCode
+
+      if (paymentMethod === 'vnpay') {
+        // VNPay payment flow
+        console.log('[Checkout] Creating VNPay payment for order:', orderCode)
+        
+        const paymentResponse = await createVNPayPayment(orderCode)
+        
+        if (paymentResponse.status === 200 && paymentResponse.data.paymentUrl) {
+          // Redirect to VNPay
+          window.location.href = paymentResponse.data.paymentUrl
+        } else {
+          alert('Không thể tạo thanh toán VNPay: ' + paymentResponse.message)
+        }
+      } else {
+        // COD payment flow
+        clearCart()
+        alert(`Đặt hàng thành công! Mã đơn hàng: ${orderCode}`)
+        router.push(`/order-confirmation/${orderCode}`)
+      }
+    } catch (error: any) {
+      console.error('Order error:', error)
+      alert('Có lỗi xảy ra khi đặt hàng: ' + (error?.message || 'Unknown error'))
+    }
   }
 
-  const shipping = 10.0
-  const tax = cartTotal * 0.1
   const discount = voucherCode === "SAVE20" ? cartTotal * 0.2 : 0
-  const finalTotal = cartTotal + shipping + tax - discount
+  const finalTotal = cartTotal + (shippingFee || 0) - discount
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-lg">Đang tải...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -146,53 +285,129 @@ export default function CheckoutPage() {
                         className="w-full px-4 py-2 border border-border rounded bg-card text-foreground mb-4"
                       />
 
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <input
-                          type="text"
-                          name="city"
-                          placeholder="City"
-                          value={formData.city}
-                          onChange={handleInputChange}
-                          required
-                          className="px-4 py-2 border border-border rounded bg-card text-foreground"
-                        />
-                        <input
-                          type="text"
-                          name="state"
-                          placeholder="State/Province"
-                          value={formData.state}
-                          onChange={handleInputChange}
-                          required
-                          className="px-4 py-2 border border-border rounded bg-card text-foreground"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 mb-6">
-                        <input
-                          type="text"
-                          name="postalCode"
-                          placeholder="Postal Code"
-                          value={formData.postalCode}
-                          onChange={handleInputChange}
-                          required
-                          className="px-4 py-2 border border-border rounded bg-card text-foreground"
-                        />
+                      {/* GHN selectors */}
+                      <div className="grid grid-cols-3 gap-4 mb-4">
                         <select
-                          name="country"
-                          value={formData.country}
-                          onChange={handleInputChange}
+                          value={selectedProvince}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            console.log('[Checkout] Province selected:', val)
+                            setSelectedProvince(val ? Number(val) : "")
+                            setSelectedDistrict("")
+                            setSelectedWard("")
+                            setDistricts([])
+                            setWards([])
+                            if (val) {
+                              console.log('[Checkout] Fetching districts for province:', val)
+                              getDistricts(Number(val))
+                                .then((res) => {
+                                  console.log('[Checkout] Districts response:', res)
+                                  setDistricts(res?.data ?? [])
+                                })
+                                .catch((err) => {
+                                  console.error('[Checkout] Districts error:', err)
+                                  alert('Không thể tải danh sách quận/huyện: ' + (err?.message || 'Unknown error'))
+                                })
+                            }
+                          }}
                           className="px-4 py-2 border border-border rounded bg-card text-foreground"
+                          required
                         >
-                          <option>Vietnam</option>
-                          <option>Thailand</option>
-                          <option>Singapore</option>
-                          <option>Malaysia</option>
+                          <option value="">Chọn Tỉnh/Thành phố</option>
+                          {provinces.map((p) => (
+                            <option key={p.ProvinceID} value={p.ProvinceID}>
+                              {p.ProvinceName}
+                            </option>
+                          ))}
+                        </select>
+
+                        <select
+                          value={selectedDistrict}
+                          onChange={(e) => {
+                            const val = e.target.value
+                            setSelectedDistrict(val ? Number(val) : "")
+                            setSelectedWard("")
+                            setSelectedService("")
+                            setWards([])
+                            setServices([])
+                            if (val) {
+                              getWards(Number(val)).then((res) => setWards(res?.data ?? [])).catch(() => {})
+                              getAvailableServices(Number(val)).then((res) => setServices(res?.data ?? [])).catch(() => {})
+                            }
+                          }}
+                          className="px-4 py-2 border border-border rounded bg-card text-foreground"
+                          required
+                        >
+                          <option value="">Chọn Quận/Huyện</option>
+                          {districts.map((d) => (
+                            <option key={d.DistrictID} value={d.DistrictID}>
+                              {d.DistrictName}
+                            </option>
+                          ))}
+                        </select>
+
+                        <select
+                          value={selectedWard}
+                          onChange={(e) => setSelectedWard(e.target.value)}
+                          className="px-4 py-2 border border-border rounded bg-card text-foreground"
+                          required
+                        >
+                          <option value="">Chọn Phường/Xã</option>
+                          {wards.map((w) => (
+                            <option key={w.WardCode} value={w.WardCode}>
+                              {w.WardName}
+                            </option>
+                          ))}
                         </select>
                       </div>
 
-                      <Button type="submit" className="w-full" size="lg">
-                        Continue to Payment
-                      </Button>
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <select
+                          value={selectedService}
+                          onChange={(e) => setSelectedService(Number(e.target.value))}
+                          className="px-4 py-2 border border-border rounded bg-card text-foreground"
+                          required
+                        >
+                          <option value="">Chọn dịch vụ vận chuyển</option>
+                          {services.map((s) => (
+                            <option key={s.service_id} value={s.service_id}>
+                              {s.short_name}
+                            </option>
+                          ))}
+                        </select>
+
+                        <Button type="button" onClick={handleCalculateShipping} disabled={!selectedService || !selectedDistrict || !selectedWard}>
+                          Tính phí vận chuyển
+                        </Button>
+                      </div>
+
+                      {loadingShip && <p className="text-sm text-muted-foreground">Đang tính phí vận chuyển...</p>}
+                      {shippingFee !== null && (
+                        <div className="mt-4 p-3 bg-muted rounded">
+                          <div className="flex justify-between mb-2">
+                            <span className="text-sm">Phí vận chuyển</span>
+                            <span className="font-semibold">
+                              {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(shippingFee)}
+                            </span>
+                          </div>
+                          {leadtime && (
+                            <p className="text-sm text-muted-foreground">
+                              Dự kiến giao: {new Date(leadtime * 1000).toLocaleDateString('vi-VN', { 
+                                weekday: 'short', 
+                                year: 'numeric', 
+                                month: 'short', 
+                                day: 'numeric' 
+                              })}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex gap-3 mt-6">
+                        <Button type="submit" variant="outline">
+                          Tiếp tục thanh toán
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 </form>
@@ -288,14 +503,14 @@ export default function CheckoutPage() {
                       <span>Subtotal</span>
                       <span>${cartTotal.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Shipping</span>
-                      <span>${shipping.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Tax</span>
-                      <span>${tax.toFixed(2)}</span>
-                    </div>
+
+                    {shippingFee !== null && (
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Shipping</span>
+                        <span>${shippingFee.toFixed(2)}</span>
+                      </div>
+                    )}
+
                     {discount > 0 && (
                       <div className="flex justify-between text-green-600">
                         <span>Discount</span>
