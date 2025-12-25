@@ -42,4 +42,8 @@ public class VariantProduct extends AbstractEntity<Long> {
 
     @OneToMany(mappedBy = "variantProduct")
     private Set<StockReceiptItem> stockReceiptItems;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_from_receipt_id")
+    private StockReceipts createdFromReceipt;
 }

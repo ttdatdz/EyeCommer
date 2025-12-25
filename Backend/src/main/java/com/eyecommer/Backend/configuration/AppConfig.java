@@ -78,6 +78,7 @@ public class AppConfig {
                         .requestMatchers("/api/vouchers/**").hasAnyAuthority("admin", "staff")
                         .requestMatchers("/api/inventory/**").hasAnyAuthority("admin")
                         .requestMatchers("/api/suppliers/**").hasAnyAuthority("admin")
+                        .requestMatchers("/api/purchase-receipts/**").hasAnyAuthority("admin")
                         .requestMatchers("/api/cart/**").hasAnyAuthority("user")
                         .requestMatchers("/api/addresses/**").hasAnyAuthority("user")
                         .anyRequest().authenticated()

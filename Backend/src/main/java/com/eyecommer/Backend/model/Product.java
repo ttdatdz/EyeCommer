@@ -37,6 +37,10 @@ public class Product extends AbstractEntity<Long> {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<VariantProduct> variants;
 
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_from_receipt_id")
+    private StockReceipts createdFromReceipt;
 //    @OneToMany(mappedBy = "product")
 //    private Set<OrderItem> orderItems;
 //

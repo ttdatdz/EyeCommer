@@ -9,18 +9,9 @@ import java.util.List;
 @Data
 public class PurchaseReceiptCreateRequestDTO {
 
-    // Supplier nhập text
     @NotBlank
-    private String supplierName;
-
-    // Optional – chỉ dùng khi tạo mới
-    @NotBlank
-    private String supplierEmail;
-    @NotBlank
-    private String supplierPhone;
-    @NotBlank
-    private String supplierAddress;
+    private Long supplierId;
 
     @NotEmpty
-    private List<PurchaseReceiptItemRequestDTO> items;
+    private List<PurchaseReceiptProductDTO> products;
 }

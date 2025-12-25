@@ -31,4 +31,5 @@ public class StockReceipts extends AbstractEntity<Long> {
 
     @OneToMany(mappedBy = "stockReceipt", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<StockReceiptItem> items = new HashSet<>();
+
 }

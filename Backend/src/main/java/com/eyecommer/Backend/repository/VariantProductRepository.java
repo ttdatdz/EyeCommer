@@ -23,6 +23,8 @@ public interface VariantProductRepository extends JpaRepository<VariantProduct, 
     @Query("select v from VariantProduct v where v.id = :id")
     Optional<VariantProduct> findByIdForUpdate(Long id);
 
+    boolean existsBySku(String sku);
+    long countByProductId(Long productId);
 
 
 

@@ -8,10 +8,19 @@ import java.util.List;
 
 @Data
 public class PurchaseReceiptResponseDTO {
+
     private Long id;
+
     private String supplierName;
+    private String supplierEmail;
+    private String supplierPhone;
+
     private PurchaseReceiptStatus status;
-    private LocalDateTime receiptDate;
+
     private Double totalAmount;
-    private List<PurchaseReceiptItemResponseDTO> items;
+
+    private LocalDateTime receiptDate;
+
+
+    private List<PurchaseReceiptProductResponseDTO> products;
 }
