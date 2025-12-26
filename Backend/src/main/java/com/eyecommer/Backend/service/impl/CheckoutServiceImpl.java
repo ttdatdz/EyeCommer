@@ -49,7 +49,11 @@ public class CheckoutServiceImpl implements CheckoutService {
         if (!address.getUser().getId().equals(user.getId())) {
             throw new RuntimeException("Address does not belong to user");
         }
-
+        // 3. Validate shipping fee
+        if (request.getShippingFee() == null || request.getShippingFee() < 0) {
+            throw new RuntimeException("Invalid shipping fee");
+        }
+        double shippingFee = request.getShippingFee();
         // 3. Validate items
         List<CartItemCheckoutDTO> reqItems = request.getItems();
         if (reqItems == null || reqItems.isEmpty()) {
@@ -133,15 +137,18 @@ public class CheckoutServiceImpl implements CheckoutService {
         snapshot.setTotalAmount(totalAmount);
 
         // 7. Voucher
-        double finalAmount = totalAmount;
+//        double finalAmount = totalAmount;
+        double discountAmount = 0;
         if (request.getVoucherId() != null) {
             var applied = voucherService.applyVoucher(request.getVoucherId(), totalAmount);
             snapshot.setVoucherId(request.getVoucherId());
             snapshot.setVoucherCode(applied.getCode());
             snapshot.setVoucherDiscountAmount(applied.getDiscountAmount());
-            finalAmount = applied.getFinalAmount();
+            discountAmount = applied.getDiscountAmount();
+//            finalAmount = applied.getFinalAmount();
         }
-
+        double finalAmount = totalAmount + shippingFee - discountAmount;
+        if (finalAmount < 0) finalAmount = 0;
         snapshot.setFinalAmount(finalAmount);
 
         // 8. Save snapshot

@@ -9,5 +9,6 @@ public class CheckoutRequestDTO {
     private Long addressId;
     private String paymentMethod; // COD / VNPAY
     private Long voucherId;       // optional
+    private Double shippingFee;
     private List<CartItemCheckoutDTO> items;
 }
