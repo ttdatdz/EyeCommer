@@ -41,7 +41,7 @@ async function apiFetch(path: string, options: RequestInit = {}) {
 }
 
 export type LoginPayload = { username: string; password: string }
-export type RegisterPayload = { name?: string; email?: string; username?: string; password: string }
+export type RegisterPayload = { username: string; email: string; password: string; role?: string }
 
 export async function login(payload: LoginPayload) {
   return apiFetch('/auth/login', {

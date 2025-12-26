@@ -10,7 +10,7 @@ import { register as registerApi } from '@/lib/services/auth'
 
 export default function RegisterPage() {
   const router = useRouter()
-  const [name, setName] = useState('')
+  const [username, setUsername] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -19,7 +19,7 @@ export default function RegisterPage() {
     e.preventDefault()
     setError('')
     try {
-      const res: any = await registerApi({ name, email, password })
+      const res: any = await registerApi({ username, email, password, role: 'user' })
       const token = res?.token || res?.accessToken || res?.access_token
       const user = res?.user || (res?.email ? res : null)
 
@@ -46,12 +46,12 @@ export default function RegisterPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold mb-2">Name</label>
+                <label className="block text-sm font-semibold mb-2">Username</label>
                 <input
                   type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your name"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Your username"
                   className="w-full px-4 py-2 border border-border rounded bg-card text-foreground"
                   required
                 />
