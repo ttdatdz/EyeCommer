@@ -114,18 +114,10 @@ export default function CartPage() {
                         <span>Subtotal</span>
                         <span>${total.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between text-muted-foreground">
-                        <span>Shipping</span>
-                        <span>$10.00</span>
-                      </div>
-                      <div className="flex justify-between text-muted-foreground">
-                        <span>Tax</span>
-                        <span>${(total * 0.1).toFixed(2)}</span>
-                      </div>
                     </div>
                     <div className="flex justify-between font-semibold text-lg mb-6">
                       <span>Total</span>
-                      <span>${(total + 10 + total * 0.1).toFixed(2)}</span>
+                      <span>${total.toFixed(2)}</span>
                     </div>
                     <Button onClick={handleCheckout} className="w-full" size="lg">
                       Proceed to Checkout

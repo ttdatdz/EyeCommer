@@ -3,29 +3,33 @@
 
 interface User {
   id: string
-  email: string
+  username: string
+  email?: string
   password: string
   role: "customer" | "staff" | "admin"
   name: string
 }
 
 const users: Record<string, User> = {
-  "customer@example.com": {
+  "customer": {
     id: "cust_1",
+    username: "customer",
     email: "customer@example.com",
     password: "password", // Never store plain text in production!
     role: "customer",
     name: "John Doe",
   },
-  "staff@example.com": {
+  "staff": {
     id: "staff_1",
+    username: "staff",
     email: "staff@example.com",
     password: "password",
     role: "staff",
     name: "Jane Smith",
   },
-  "admin@example.com": {
+  "admin": {
     id: "admin_1",
+    username: "admin",
     email: "admin@example.com",
     password: "password",
     role: "admin",
@@ -35,8 +39,8 @@ const users: Record<string, User> = {
 
 let currentUser: User | null = null
 
-export function login(email: string, password: string) {
-  const user = users[email]
+export function login(username: string, password: string) {
+  const user = users[username]
   if (user && user.password === password) {
     currentUser = user
     localStorage.setItem("currentUser", JSON.stringify(user))
@@ -47,7 +51,23 @@ export function login(email: string, password: string) {
 
 export function logout() {
   currentUser = null
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
   localStorage.removeItem("currentUser")
+  localStorage.removeItem('accessToken')
+  localStorage.removeItem('refreshToken')
+
+  // Try to notify server but don't block logout
+  try {
+    if (typeof window !== 'undefined') {
+      fetch((process.env.NEXT_PUBLIC_API_BASE_URL || '/api') + '/auth/logout', {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        credentials: 'include',
+      }).catch(() => {})
+    }
+  } catch (e) {
+    // ignore
+  }
 }
 
 export function getCurrentUser() {
