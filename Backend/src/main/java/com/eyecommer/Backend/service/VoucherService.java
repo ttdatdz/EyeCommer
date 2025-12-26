@@ -27,5 +27,5 @@ public interface VoucherService {
 
     List<VoucherResponseDTO> getVouchersForCustomer(Long userId);
 
-    VoucherApplyResponse applyVoucher(Long voucherId, Double totalAmount);
+    VoucherApplyResponse applyVoucher(Long userId, Long voucherId, Double totalAmount);
 }

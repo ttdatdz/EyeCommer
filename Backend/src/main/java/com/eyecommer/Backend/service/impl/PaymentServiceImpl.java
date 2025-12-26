@@ -1,10 +1,7 @@
 package com.eyecommer.Backend.service.impl;
 
 import com.eyecommer.Backend.model.*;
-import com.eyecommer.Backend.repository.CartItemRepository;
-import com.eyecommer.Backend.repository.CartRepository;
-import com.eyecommer.Backend.repository.OrderSnapshotRepository;
-import com.eyecommer.Backend.repository.VariantProductRepository;
+import com.eyecommer.Backend.repository.*;
 import com.eyecommer.Backend.service.OrderSnapshotService;
 import com.eyecommer.Backend.service.PaymentService;
 import com.eyecommer.Backend.utils.PaymentStatus;
@@ -12,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -24,7 +22,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final CartItemRepository cartItemRepository;
     private final CartRepository cartRepository;
     private final OrderSnapshotService orderSnapshotService;
-
+    private final VoucherUserRepository voucherUserRepository;
 
 
     @Override
@@ -69,6 +67,24 @@ public class PaymentServiceImpl implements PaymentService {
 
         //  2. CONFIRM SNAPSHOT (chuyển reserved → stock thật)
         orderSnapshotService.confirmSnapshot(snapshot.getOrderCode());
+        // 4. ĐÁNH DẤU VOUCHER ĐÃ ĐƯỢC SỬ DỤNG (NẾU CÓ)
+        if (snapshot.getVoucherId() != null) {
+
+            VoucherUser voucherUser = voucherUserRepository
+                    .findByUser_IdAndVoucher_Id(
+                            snapshot.getUser().getId(),
+                            snapshot.getVoucherId()
+                    )
+                    .orElseThrow(() -> new RuntimeException("Voucher not claimed by user"));
+
+            // Chỉ update nếu chưa dùng (an toàn callback lặp)
+            if (voucherUser.getUsedDate() == null) {
+                voucherUser.setUsedDate(LocalDateTime.now());
+                voucherUser.setStatus("USED");
+
+                voucherUserRepository.save(voucherUser);
+            }
+        }
     }
     @Override
     @Transactional

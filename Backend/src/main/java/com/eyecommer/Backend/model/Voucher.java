@@ -39,5 +39,7 @@ public class Voucher extends AbstractEntity<Long> {
 
     @OneToMany(mappedBy = "voucher")
     private Set<VoucherUser> users;
+
+
 }
 

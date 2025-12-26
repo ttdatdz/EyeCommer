@@ -34,5 +34,7 @@ public class VoucherUser extends AbstractEntity<Long> {
 
     @Column(name = "status")
     private String status;
+
+
 }
 

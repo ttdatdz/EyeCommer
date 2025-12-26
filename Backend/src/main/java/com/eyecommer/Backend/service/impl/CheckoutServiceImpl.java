@@ -140,7 +140,7 @@ public class CheckoutServiceImpl implements CheckoutService {
 //        double finalAmount = totalAmount;
         double discountAmount = 0;
         if (request.getVoucherId() != null) {
-            var applied = voucherService.applyVoucher(request.getVoucherId(), totalAmount);
+            var applied = voucherService.applyVoucher(  user.getId(), request.getVoucherId(), totalAmount);
             snapshot.setVoucherId(request.getVoucherId());
             snapshot.setVoucherCode(applied.getCode());
             snapshot.setVoucherDiscountAmount(applied.getDiscountAmount());

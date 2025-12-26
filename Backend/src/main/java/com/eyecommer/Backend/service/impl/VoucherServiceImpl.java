@@ -22,6 +22,8 @@ import com.eyecommer.Backend.utils.GenerateCodeRandom;
 import com.eyecommer.Backend.utils.SearchCriteriaUtils;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class VoucherServiceImpl implements VoucherService {
 
+    private static final Logger log = LoggerFactory.getLogger(VoucherServiceImpl.class);
     private final VoucherRepository voucherRepository;
     private final VoucherMapper voucherMapper;
     private final GenericSearchRepository genericSearchRepository;
@@ -224,15 +227,38 @@ public class VoucherServiceImpl implements VoucherService {
     }
 
     @Override
-    public VoucherApplyResponse applyVoucher(Long voucherId, Double totalAmount) {
+    @Transactional(readOnly = true)
+    public VoucherApplyResponse applyVoucher(Long userId, Long voucherId, Double totalAmount) {
+
         Voucher voucher = voucherRepository.findById(voucherId)
                 .orElseThrow(() -> new RuntimeException("Voucher not found"));
 
-        double discountAmount;
-            discountAmount = totalAmount * voucher.getDiscount() / 100;
+        // 1. Check user đã claim voucher chưa
+        VoucherUser voucherUser = voucherUserRepository
+                .findByUser_IdAndVoucher_Id(userId, voucherId)
+                .orElseThrow(() -> new RuntimeException("Voucher not claimed by user"));
 
+        // 2. Check voucher đã dùng chưa
+        if (voucherUser.getUsedDate() != null) {
+            log.info("Check usedDate " + voucherUser.getUsedDate());
+            throw new RuntimeException("Voucher already used");
+        }
+
+        // 3. Check thời gian hiệu lực
+        LocalDateTime now = LocalDateTime.now();
+        if (voucher.getStartDate().isAfter(now) || voucher.getEndDate().isBefore(now)) {
+            throw new RuntimeException("Voucher expired");
+        }
+
+        // 4. Tính discount
+        double discountAmount = totalAmount * voucher.getDiscount() / 100;
         double finalAmount = Math.max(totalAmount - discountAmount, 0);
 
-        return new VoucherApplyResponse(voucher.getCode(), discountAmount, finalAmount);
+        return new VoucherApplyResponse(
+                voucher.getCode(),
+                discountAmount,
+                finalAmount
+        );
     }
+
 }
